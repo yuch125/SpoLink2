@@ -1,12 +1,11 @@
+// screens/LoginScreen.tsx
 console.log('✅ 앱 진입됨');
 
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../App'; // App.tsx의 타입 경로에 따라 조정
-
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
+import { RootStackParamList, KakaoPlace } from '../navigation/RootStackParamList';type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
 export default function LoginScreen() {
   const navigation = useNavigation<NavigationProp>();
@@ -18,7 +17,7 @@ export default function LoginScreen() {
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
-  const SERVER_URL = 'http://172.30.14.40:3000'; // 자신의 PC IP로 변경
+  const SERVER_URL = 'http://192.168.68.60:3000'; // 자신의 PC IP로 변경
 
   const handleLogin = () => {
     if (!username || !password) {

@@ -9,28 +9,7 @@ import HomeScreen from './screens/HomeScreen';
 import PlaceSearchScreen from './screens/PlaceSearchScreen';
 import PlaceDetailScreen from './screens/PlaceDetailScreen';
 import ChatScreen from './screens/ChatScreen';
-
-// 1) KakaoPlace 타입을 미리 export 해줍니다.
-export type KakaoPlace = {
-  id: string;
-  place_name: string;
-  address_name: string;
-  road_address_name?: string;
-  phone?: string;
-  x: string;
-  y: string;
-};
-
-// 2) RootStackParamList 에서도 KakaoPlace를 재사용
-export type RootStackParamList = {
-  Login: undefined;
-  Signup: undefined;
-  Home: undefined;
-  PlaceSearch: undefined;
-  PlaceDetail: { place: KakaoPlace };  // 이제 KakaoPlace를 참조할 수 있습니다.
-  Chat: undefined;
-};
-
+import { RootStackParamList } from './navigation/RootStackParamList';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
