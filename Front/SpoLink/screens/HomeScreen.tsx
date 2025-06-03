@@ -19,9 +19,19 @@ export default function HomeScreen() {
           <Text style={styles.title}>SpoLink</Text>
           <Text style={styles.subtitle}>WHY NOT?</Text>
         </View>
-        <TouchableOpacity style={styles.plusButton}>
-          <Text style={styles.plusText}>＋</Text>
-        </TouchableOpacity>
+        <TouchableOpacity
+         style={styles.plusButton}
+        onPress={() => {
+           // (1) 디버그 로그나 Alert로 제대로 눌리는지 확인
+           console.log('플러스 버튼 눌림');
+           // Alert.alert('DEBUG', '플러스 버튼 눌렸습니다');
+           // (2) CreatePost 화면으로 네비게이트
+           navigation.navigate('CreatePost');
+         }}
+       >
+         <Text style={styles.plusText}>＋</Text>
+       </TouchableOpacity>
+        
       </View>
 
       {/* 스포츠 카테고리 프레임 */}

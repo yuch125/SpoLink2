@@ -3,7 +3,7 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-
+import CreatePostScreen from './screens/CreatePostScreen';
 import LoginScreen from './screens/LoginScreen';
 import HomeScreen from './screens/HomeScreen';
 import PlaceSearchScreen from './screens/PlaceSearchScreen';
@@ -21,6 +21,7 @@ export default function App() {
         <Stack.Screen name="PlaceSearch" component={PlaceSearchScreen} />
         <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
         <Stack.Screen name="Chat" component={ChatScreen} />
+        <Stack.Screen name="CreatePost" component={CreatePostScreen} /> 
       </Stack.Navigator>
     </NavigationContainer>
   );

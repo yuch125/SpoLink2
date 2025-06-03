@@ -19,6 +19,7 @@ export type KakaoPlace = {
 export type RootStackParamList = {
   Login: undefined;
   Home: undefined;
+  Map: undefined;
   CreatePost: { selectedPlace?: string } | undefined;
   PlaceSearch: { from?: 'CreatePost' } | undefined;
   PlaceDetail: { place: KakaoPlace } | undefined;

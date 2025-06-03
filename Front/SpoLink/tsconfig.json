@@ -2,7 +2,7 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
-    "module": "ESNext",
+    "module": "esnext",
     "jsx": "react-native"     // ✅ 이 줄을 추가
   }
 }

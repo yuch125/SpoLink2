@@ -17,7 +17,7 @@ export default function LoginScreen() {
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
-  const SERVER_URL = 'http://192.168.68.60:3000'; // 자신의 PC IP로 변경
+  const SERVER_URL = 'http://192.168.68.55:3000'; // 자신의 PC IP로 변경
 
   const handleLogin = () => {
     if (!username || !password) {
