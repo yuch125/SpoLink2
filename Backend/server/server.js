@@ -30,7 +30,7 @@ app.get('/', (req, res) => {
 });
 
 app.post('/login', async (req, res) => {
-  console.log('🔥 로그인 요청 도착:', req.body);
+  console.log('🔥 로그인 요청:', req.body);
   const { username, password } = req.body;
 
   try {
