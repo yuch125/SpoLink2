@@ -1,6 +1,8 @@
 // screens/HomeScreen.tsx
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import axios from 'axios';
+import { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Image, TouchableOpacity, } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/RootStackParamList';
@@ -9,7 +11,20 @@ type NavProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
 export default function HomeScreen() {
   const navigation = useNavigation<NavProp>();
+  const [posts, setPosts] = useState([]);
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const response = await axios.get('http://192.168.68.55:3000/posts'); // 너의 서버 IP로 정확히!
+        console.log('📥 받은 카드 목록:', response.data); // 디버깅 로그
+        setPosts(response.data);
+      } catch (error) {
+        console.error('❌ 카드 불러오기 실패:', error);
+      }
+    };
 
+    fetchPosts();
+  }, []);
   return (
     <View style={styles.container}>
       {/* 상단 로고 영역 */}
@@ -20,18 +35,18 @@ export default function HomeScreen() {
           <Text style={styles.subtitle}>WHY NOT?</Text>
         </View>
         <TouchableOpacity
-         style={styles.plusButton}
-        onPress={() => {
-           // (1) 디버그 로그나 Alert로 제대로 눌리는지 확인
-           console.log('플러스 버튼 눌림');
-           // Alert.alert('DEBUG', '플러스 버튼 눌렸습니다');
-           // (2) CreatePost 화면으로 네비게이트
-           navigation.navigate('CreatePost');
-         }}
-       >
-         <Text style={styles.plusText}>＋</Text>
-       </TouchableOpacity>
-        
+          style={styles.plusButton}
+          onPress={() => {
+            // (1) 디버그 로그나 Alert로 제대로 눌리는지 확인
+            console.log('플러스 버튼 눌림');
+            // Alert.alert('DEBUG', '플러스 버튼 눌렸습니다');
+            // (2) CreatePost 화면으로 네비게이트
+            navigation.navigate('CreatePost');
+          }}
+        >
+          <Text style={styles.plusText}>＋</Text>
+        </TouchableOpacity>
+
       </View>
 
       {/* 스포츠 카테고리 프레임 */}
@@ -56,7 +71,7 @@ export default function HomeScreen() {
 
       {/* 하단 내비게이션 바 */}
       <View style={styles.navbar}>
-        <TouchableOpacity onPress={() => navigation.navigate('PlaceSearch')}>
+        <TouchableOpacity onPress={() => navigation.navigate({ name: 'PlaceSearch', params: {} })}>
           <Image source={require('../assets/placeholder.png')} style={styles.navIcon} />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.navigate('Home')}>
@@ -65,6 +80,15 @@ export default function HomeScreen() {
         <TouchableOpacity onPress={() => navigation.navigate('Chat')}>
           <Image source={require('../assets/messenger.png')} style={styles.navIcon} />
         </TouchableOpacity>
+      </View>
+      <View>
+        {posts.map((post: any) => (
+          <View key={post._id} style={styles.card}>
+            <Text style={styles.cardTitle}>{post.category} - {post.content}</Text>
+            <Text style={styles.cardSub}>📍 {post.location} | ⏰ {post.time}</Text>
+            <Text style={styles.cardSub}>인원: {post.participants}/{post.maxParticipants}</Text>
+          </View>
+        ))}
       </View>
     </View>
   );
@@ -119,6 +143,27 @@ const styles = StyleSheet.create({
   },
   navIcon: {
     width: 30, height: 30,
+  },
+  card: {
+    backgroundColor: '#fff',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#000',
+    marginBottom: 5,
+  },
+  cardSub: {
+    fontSize: 13,
+    color: '#555',
   },
 });
 

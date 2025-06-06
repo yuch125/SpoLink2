@@ -21,7 +21,7 @@ import { KAKAO_API_KEY } from '../config';
 type PlaceSearchNavProp = NativeStackNavigationProp<RootStackParamList, 'PlaceSearch'>;
 type PlaceSearchRouteProp = RouteProp<RootStackParamList, 'PlaceSearch'>;
 
-const FACILITY_KEYWORDS = ['체육관', '농구장', '축구장'];
+const FACILITY_KEYWORDS = ['체육관', '농구장', '축구장','농구','야구','야구장','배구','배구장','축구'];
 
 const PlaceSearchScreen: React.FC = () => {
   const navigation = useNavigation<PlaceSearchNavProp>();
@@ -144,7 +144,7 @@ const PlaceSearchScreen: React.FC = () => {
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.input}
-          placeholder="검색어: 체육관, 농구장, 축구장"
+          placeholder="검색어: 체육관, 농구장, 축구장, 야구장, 배구장"
           value={keyword}
           onChangeText={setKeyword}
           onSubmitEditing={() => searchPlaces(keyword)}

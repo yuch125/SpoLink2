@@ -1,54 +1,85 @@
-require('dotenv').config({ path: '../.env' });
+// server.js
+console.log('✅ server.js 진입 시작: 파일 정상 실행');
+
 const express = require('express');
 const mongoose = require('mongoose');
+
+require('dotenv').config({ path: __dirname + '/../.env' }); // server.js 기준, 상위 폴더의 .env를 읽음
+console.log('✨ (디버깅) __dirname=', __dirname);
+console.log('✨ (디버깅) process.cwd()=', process.cwd());
+console.log('✨ (디버깅) MONGO_URI=', process.env.MONGODB_URI)
 const bcrypt = require('bcrypt');
-const app = express();
 const jwt = require('jsonwebtoken');
+
+const app = express();
 const PORT = process.env.PORT || 3000;
+
+// ── 1) JSON 바디 파서: 모든 라우터 등록보다 반드시 먼저 실행
 app.use(express.json());
-app.get('/', (req, res) => {
-  res.send(`
-    <html>
-      <head>
-        <meta charset="UTF-8" />
-        <title>SpoLink API 안내</title>
-      </head>
-      <body style="font-family: sans-serif; padding: 2rem; background: #f4f4f4;">
-        <h2>✅ SpoLink 서버에 오신 걸 환영합니다!</h2>
-        <p>🔗 사용 가능한 API 목록:</p>
-        <ul>
-          <li><a href="/users" target="_blank">[GET] /users - 전체 사용자 확인</a></li>
-          <li><a href="/signup" onclick="alert('이 API는 POST 전용입니다. Thunder Client 또는 앱에서 테스트하세요.'); return false;">[POST] /signup - 회원가입</a></li>
-          <li><a href="/login" onclick="alert('이 API는 POST 전용입니다. Thunder Client 또는 앱에서 테스트하세요.'); return false;">[POST] /login - 로그인</a></li>
-          <li><a href="/status" target="_blank">[GET] /status - 서버 상태 확인</a></li>
-        </ul>
-        <p style="margin-top: 2rem;">📱 이 서버 주소를 앱의 SERVER_URL에 입력하세요.<br/>
-        예: <code>http://192.168.68.55:3000</code></p>
-      </body>
-    </html>
-  `);
+
+
+// ── 3) 사용자 스키마 및 회원가입/로그인 라우트 정의 (Mongo 연결 전에도 정의 가능)
+const userSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
 });
+const User = mongoose.model('User', userSchema);
+
+// [GET] /users - 전체 사용자 조회 (디버깅용, 비밀번호 제외)
+app.get('/users', async (req, res) => {
+  try {
+    const users = await User.find().select('-password');
+    res.json({ success: true, users });
+  } catch (err) {
+    res.status(500).json({ success: false, message: '서버 에러', error: err.message });
+  }
+});
+
+// [GET] /status - 서버 상태 확인
+app.get('/status', (req, res) => {
+  res.json({ success: true, message: '서버 정상 작동 중' });
+});
+
+// [POST] /signup - 회원가입
+app.post('/signup', async (req, res) => {
+  const { username, password } = req.body;
+  try {
+    // (1) 이미 존재하는 사용자 검사
+    const existUser = await User.findOne({ username });
+    if (existUser) {
+      return res.status(400).json({ success: false, message: '이미 존재하는 사용자입니다.' });
+    }
+    // (2) 비밀번호 해시
+    const hashedPassword = await bcrypt.hash(password, 10);
+    // (3) 유저 생성
+    await User.create({ username, password: hashedPassword });
+    res.json({ success: true, message: '회원가입 성공' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: '서버 에러', error: err.message });
+  }
+});
+
+// [POST] /login - 로그인
 app.post('/login', async (req, res) => {
   console.log('🔥 로그인 요청:', req.body);
   const { username, password } = req.body;
 
   try {
+    // (1) 사용자 존재 여부 확인
     const user = await User.findOne({ username });
     if (!user) {
-      console.log('❗ 사용자 없음');
-      return res.json({ success: false, message: '존재하지 않는 사용자입니다.' });
+      console.log('❌ 사용자 없음:', username);
+      return res.status(400).json({ success: false, message: '존재하지 않는 사용자입니다.' });
     }
 
-    console.log('🔑 사용자 찾음:', user);
-
+    // (2) 평문 비밀번호와 DB의 해시 비교
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      console.log('❌ 비밀번호 불일치');
-      return res.json({ success: false, message: '비밀번호가 틀렸어요.' });
+      console.log('❌ 비밀번호 불일치:', username);
+      return res.status(400).json({ success: false, message: '비밀번호가 틀렸어요.' });
     }
 
-    console.log('✅ 비밀번호 일치, 토큰 발급 중');
-
+    // (3) JWT 토큰 생성 (예시로 userId, username만 페이로드에 담음)
     const token = jwt.sign(
       { userId: user._id, username: user.username },
       process.env.JWT_SECRET,
@@ -56,85 +87,51 @@ app.post('/login', async (req, res) => {
     );
 
     console.log('✅ 로그인 성공, 응답 전송');
-    return res.json({ success: true, message: '로그인 성공', userId: user._id });
+    return res.json({ success: true, message: '로그인 성공', token, userId: user._id });
   } catch (err) {
     console.log('🚨 로그인 서버 오류:', err.message);
     return res.status(500).json({ success: false, message: '서버 에러', error: err.message });
   }
 });
 
-// 미들웨어: JSON 파싱
-app.use(express.json()); 
-
-// MongoDB 연결
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-}).then(() => {
-  console.log('MongoDB 연결 성공!');
-}).catch((err) => {
-  console.error('MongoDB 연결 실패:', err);
+// ── 4) Mongoose 연결 이벤트 핸들러 등록 (디버깅용)
+mongoose.connection.on('connected', () => {
+  console.log('✅ Mongoose가 실제로 연결되었습니다!');
+});
+mongoose.connection.on('error', (err) => {
+  console.error('❌ Mongoose 연결 에러 발생:', err);
 });
 
-// 사용자 스키마 정의
-const userSchema = new mongoose.Schema({
-  username: String,
-  password: String,
-});
+// ── 5) MongoDB 연결, 연결 성공 시에만 라우터와 삭제 스케줄 등록
+mongoose
+  .connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log('✅ MongoDB 연결 성공!');
+    // ── 5-1) /posts 라우터 등록 (모집 카드 CRUD 처리)
+    const postsRouter = require('../routes/posts');
+    app.use('/posts', postsRouter);
 
-// 모델 선언
-const User = mongoose.model('User', userSchema);
+    // ── 5-2) 마감된 카드 자동 삭제 기능
+    //         (이 부분도 반드시 connect 이후에 실행되어야 함)
+    const getPostModel = require('../models/Post');
+    const Post = getPostModel(mongoose);  // ← 반드시 함수로 불러와야 함!
+    setInterval(async () => {
+      try {
+        const now = new Date();
+        const result = await Post.deleteMany({ expiresAt: { $lte: now } });
+        if (result.deletedCount > 0) {
+          console.log(`🧹 ${result.deletedCount}개 마감된 모집카드 삭제됨`);
+        }
+      } catch (err) {
+        console.error('자동 삭제 에러:', err);
+      }
+    }, 10 * 60 * 1000); // 10분마다 실행
 
-// API 엔드포인트: 회원가입
-app.post('/signup', async (req, res) => {
-  const { username, password } = req.body;
-  try {
-    const existUser = await User.findOne({ username });
-    if (existUser) {
-      return res.json({ success: false, message: '이미 존재하는 사용자입니다.' });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10); // 🔐 암호화
-    await User.create({ username, password: hashedPassword });
-
-    res.json({ success: true, message: '회원가입 성공' });
-  } catch (err) {
-    res.status(500).json({ success: false, message: '서버 에러', error: err.message });
-  }
-});
-
-// API 엔드포인트: 로그인
-app.post('/login', async (req, res) => {
-  const { username, password } = req.body;
-  console.log('🔥 로그인 요청 도착:', req.body);
-  try {
-    const user = await User.findOne({ username });
-    if (!user) {
-      console.log('❌ 사용자 없음:', username);
-      return res.json({ success: false, message: '존재하지 않는 사용자입니다.' });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password); // 🔐 비교
-    if (!isMatch) {
-      console.log('❌ 비밀번호 불일치:', username);
-      return res.json({ success: false, message: '비밀번호가 틀렸어요.' });
-    }
-
-    console.log('✅ 로그인 성공!', username);
-
-    const token = jwt.sign(
-      { userId: user._id, username: user.username },
-      process.env.JWT_SECRET,
-      { expiresIn: '1h' }
-    );
-
-    res.json({ success: true, message: '로그인 성공', userId: user._id });
-  } catch (err) {
-    res.status(500).json({ success: false, message: '서버 에러', error: err.message });
-  }
-});
-
-// 서버 실행
-app.listen(PORT, () => {
-  console.log(`서버가 포트 ${PORT}에서 시작됨`);
-});
+    // ── 5-3) 서버 시작
+    app.listen(PORT, () => {
+      console.log(`🚀 서버가 포트 ${PORT}에서 실행됨`);
+    });
+  })
+  .catch((err) => {
+    console.error('❌ MongoDB 연결 실패:', err);
+  });

@@ -1,5 +1,4 @@
 // screens/CreatePostScreen.tsx
-
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -8,51 +7,95 @@ import {
   TextInput,
   StyleSheet,
   Alert,
+  Platform,
 } from 'react-native';
-import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/RootStackParamList';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../navigation/RootStackParamList';
+import axios from 'axios';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { SERVER_URL } from '../constants';
 
 type CreatePostNavProp = NativeStackNavigationProp<RootStackParamList, 'CreatePost'>;
-type CreatePostRouteProp = RouteProp<RootStackParamList, 'CreatePost'>;
 
 export default function CreatePostScreen() {
   const navigation = useNavigation<CreatePostNavProp>();
-  const route = useRoute<CreatePostRouteProp>();
+  const route = useRoute();
 
-  const [category, setCategory] = useState<string>('');   // 운동 종목
-  const [content, setContent] = useState<string>('');     // 모집 내용
-  const [time, setTime] = useState<string>('');           // 시간
-  const [location, setLocation] = useState<string>('');   // 선택된 장소(문자열)
+  const [category, setCategory] = useState('');
+  const [content, setContent] = useState('');
+  const [time, setTime] = useState('');
+  const [location, setLocation] = useState('');
+  const [detail, setDetail] = useState('');
+  const [expiresAt, setExpiresAt] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
-  // ── **PlaceSearch에서 돌아왔을 때 (selectedPlace가 있으면) location에 세팅**
+  // 1. 장소를 선택하면 상태에 반영
   useEffect(() => {
-    if (route.params?.selectedPlace) {
-      setLocation(route.params.selectedPlace);
+    if ((route as any).params?.selectedPlace) {
+      setLocation((route as any).params.selectedPlace);
     }
-  }, [route.params?.selectedPlace]);
+  }, [(route as any).params?.selectedPlace]);
 
-  const handleSubmit = () => {
-    if (!category || !content || !time || !location) {
+  const onChangeDate = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setExpiresAt(selectedDate);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!category || !content || !time || !location || !detail) {
       Alert.alert('모든 항목을 입력해 주세요.');
       return;
     }
-    // TODO: 서버로 POST하거나 Context/Redux에 저장
-    console.log({ category, content, time, location });
-    Alert.alert('모집 카드가 생성되었습니다!');
-    navigation.goBack();
+
+    const newPost = {
+      category,
+      content,
+      time,
+      location,
+      detail,
+      writer: '유저닉네임', // 추후 로그인 사용자로 대체
+    };
+
+    try {
+      await axios.post(`${SERVER_URL}/posts`, newPost, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      Alert.alert('모집 카드가 생성되었습니다!');
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Home' }],
+      });
+    } catch (err: any) {
+      console.error('❌ 카드 생성 실패:', err.response?.data || err.message);
+      Alert.alert('카드 생성 중 오류가 발생했습니다.');
+    }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>모임을 만들어 주세요</Text>
 
-      <TextInput
-        placeholder="운동 종목 (예: 농구)"
-        style={styles.input}
-        value={category}
-        onChangeText={setCategory}
-      />
+      <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8 }}>운동 종목 선택</Text>
+      <View style={styles.sportButtonContainer}>
+        {['농구', '축구', '야구', '배구'].map((sport) => (
+          <TouchableOpacity
+            key={sport}
+            style={[
+              styles.sportButton,
+              category === sport && styles.sportButtonSelected,
+            ]}
+            onPress={() => setCategory(sport)}
+          >
+            <Text style={category === sport ? styles.sportTextSelected : styles.sportText}>
+              {sport}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       <TextInput
         placeholder="모집 내용"
         style={styles.input}
@@ -60,24 +103,49 @@ export default function CreatePostScreen() {
         onChangeText={setContent}
       />
       <TextInput
-        placeholder="시간 (예: 18~20시)"
+        placeholder="시간 (예: 18:00~20:00)"
         style={styles.input}
         value={time}
         onChangeText={setTime}
       />
 
-      {/* 📍 장소 입력 부분 → TextInput 대신 TouchableOpacity로 대체 */}
       <TouchableOpacity
         style={[styles.input, styles.locationBox]}
         onPress={() => {
-          // from:'CreatePost' 파라미터를 넘겨서 PlaceSearch로 이동
-          navigation.navigate('PlaceSearch', { from: 'CreatePost' });
+          navigation.navigate('PlaceSearch', {
+            from: 'CreatePost',
+            prevData: { category, content, time, detail },
+          });
         }}
       >
         <Text style={{ color: location ? '#000' : '#888' }}>
           {location ? location : '장소를 선택하세요'}
         </Text>
       </TouchableOpacity>
+
+      <TextInput
+        placeholder="세부사항 (예: 준비물 등)"
+        style={styles.input}
+        value={detail}
+        onChangeText={setDetail}
+      />
+
+      <TouchableOpacity
+        style={[styles.input, styles.datePickerBox]}
+        onPress={() => setShowDatePicker(true)}
+      >
+        <Text style={{ color: '#000' }}>
+          모집 마감시간: {expiresAt.toLocaleString()}
+        </Text>
+      </TouchableOpacity>
+      {showDatePicker && (
+        <DateTimePicker
+          value={expiresAt}
+          mode="datetime"
+          display="default"
+          onChange={onChangeDate}
+        />
+      )}
 
       <TouchableOpacity style={styles.button} onPress={handleSubmit}>
         <Text style={styles.buttonText}>모임 만들기</Text>
@@ -100,6 +168,33 @@ const styles = StyleSheet.create({
   locationBox: {
     justifyContent: 'center',
     height: 48,
+  },
+  datePickerBox: {
+    justifyContent: 'center',
+    height: 48,
+  },
+  sportButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  sportButton: {
+    flex: 1,
+    paddingVertical: 10,
+    marginHorizontal: 4,
+    borderRadius: 6,
+    backgroundColor: '#eee',
+    alignItems: 'center',
+  },
+  sportButtonSelected: {
+    backgroundColor: '#007AFF',
+  },
+  sportText: {
+    color: '#000',
+  },
+  sportTextSelected: {
+    color: '#fff',
+    fontWeight: '600',
   },
   button: {
     backgroundColor: '#007AFF',

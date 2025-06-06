@@ -21,7 +21,15 @@ export type RootStackParamList = {
   Home: undefined;
   Map: undefined;
   CreatePost: { selectedPlace?: string } | undefined;
-  PlaceSearch: { from?: 'CreatePost' } | undefined;
+  PlaceSearch: {
+    from?: 'CreatePost';
+    prevData?: {
+      category?: string;
+      content?: string;
+      time?: string;
+      detail?: string;
+    };
+  };
   PlaceDetail: { place: KakaoPlace } | undefined;
   Chat: undefined;
 };
