@@ -1,7 +1,4 @@
-// C:\Back\Front\SpoLink\navigation\RootStackParamList.ts (또는 RootNavigator 위쪽)
 
-// ── navigation/RootStackParamList.ts ──
-// ── navigation/RootStackParamList.ts ──
 
 // navigation/RootStackParamList.ts
 
@@ -18,9 +15,22 @@ export type KakaoPlace = {
 
 export type RootStackParamList = {
   Login: undefined;
-  Home: undefined;
-  Map: undefined;
-  CreatePost: { selectedPlace?: string } | undefined;
+  Home: { username: string };
+  CreatePost: {
+    username: string;
+    selectedPlace?: string;
+    prevData?: {
+      category?: string;
+      content?: string;
+      time?: string;
+      detail?: string;
+    };
+  };
+  
+  MyProfile: {
+    username: string;
+  };
+
   PlaceSearch: {
     from?: 'CreatePost';
     prevData?: {
@@ -29,12 +39,42 @@ export type RootStackParamList = {
       time?: string;
       detail?: string;
     };
+    username?: string;
   };
-  PlaceDetail: { place: KakaoPlace } | undefined;
+  EditPost: { post: Post };
   Chat: undefined;
+  PlaceDetail: { place: KakaoPlace };
+  NicknameSetup: { userId: string; token: string };
+};
+
+export interface UserProfile {
+  _id: string;
+  username: string;
+  nickname?: string;
+  profileImage?: string;
+}
+
+
+export type Post = {
+  _id: string;
+  category: string;
+  content: string;
+  time: string;
+  location: string;
+  detail: string;
+  writer: {
+    _id: string;
+    nickname: string;
+    username?: string;
+    profileImage?: string;
+  };
+  participants: number;
+  maxParticipants: number;
+  expiresAt: string;
 };
 
 
 
 
-  
+
+

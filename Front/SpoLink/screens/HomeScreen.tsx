@@ -1,94 +1,186 @@
 // screens/HomeScreen.tsx
-import React from 'react';
-import axios from 'axios';
-import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../navigation/RootStackParamList';
 
-type NavProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
+import React, { useEffect, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  Alert,
+  Platform
+} from 'react-native';
+import axios from 'axios';
+import {
+  useNavigation,
+  useRoute,
+  RouteProp,
+} from '@react-navigation/native';
+import type {
+  NativeStackNavigationProp,
+} from '@react-navigation/native-stack';
+import type {
+  RootStackParamList,
+  Post,
+} from '../navigation/RootStackParamList';
+import PostCard from '../components/PostCard';
+import { FlatList } from 'react-native';
+import { SERVER_URL } from '../constants';  // ← 수정된 import
+
+type HomeNavProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
+type HomeRouteProp = RouteProp<RootStackParamList, 'Home'>;
+
+// 📌 카테고리별 아이콘 맵 (정적 require)
+const categoryIcons: Record<string, any> = {
+  농구: require('../assets/basketball.png'),
+  축구: require('../assets/soccer-ball-variant.png'),
+  야구: require('../assets/baseball-ball.png'),
+  배구: require('../assets/volleyball-ball.png'),
+};
 
 export default function HomeScreen() {
-  const navigation = useNavigation<NavProp>();
-  const [posts, setPosts] = useState([]);
-  useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        const response = await axios.get('http://192.168.68.55:3000/posts'); // 너의 서버 IP로 정확히!
-        console.log('📥 받은 카드 목록:', response.data); // 디버깅 로그
-        setPosts(response.data);
-      } catch (error) {
-        console.error('❌ 카드 불러오기 실패:', error);
-      }
-    };
+  const navigation = useNavigation<HomeNavProp>();
+  const route = useRoute<HomeRouteProp>();
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const filteredPosts = selectedCategory
+    ? posts.filter(post => post.category === selectedCategory)
+    : posts;
+  const username = route.params?.username;
 
-    fetchPosts();
-  }, []);
+  // ① username 누락 시 useEffect 안에서 리다이렉트
+  useEffect(() => {
+    if (!username) {
+      console.warn(
+        '⚠️ HomeScreen: username param missing → redirect to Login'
+      );
+      navigation.replace('Login');
+    }
+  }, [username, navigation]);
+
+  // ② username이 없으면 렌더링하지 않음
+  if (!username) {
+    return null;
+  }
+
+
+
+
+  useFocusEffect(
+    useCallback(() => {
+      axios
+        .get(`${SERVER_URL}/posts`)
+        .then(res => setPosts(res.data))
+        .catch(err => {
+          console.error('❌ 카드 불러오기 실패:', err);
+          Alert.alert('오류', '카드 목록을 불러오는데 실패했습니다.');
+        });
+    }, [])
+  );
+
+  const handleDelete = async (postId: string) => {
+    try {
+      await axios.delete(`${SERVER_URL}/posts/${postId}`);
+      setPosts(prev => prev.filter(p => p._id !== postId));
+    } catch (err) {
+      Alert.alert('삭제 실패', '오류가 발생했습니다.');
+    }
+  };
+
+  const handleEdit = (post: Post) => {
+    navigation.navigate('EditPost', { post });
+  };
+
   return (
     <View style={styles.container}>
-      {/* 상단 로고 영역 */}
+      {/* Header */}
       <View style={styles.header}>
-        <Image source={require('../assets/Logo.png')} style={styles.logo} />
+        <Image
+          source={require('../assets/Logo.png')}
+          style={styles.logo}
+        />
         <View>
           <Text style={styles.title}>SpoLink</Text>
           <Text style={styles.subtitle}>WHY NOT?</Text>
         </View>
         <TouchableOpacity
           style={styles.plusButton}
-          onPress={() => {
-            // (1) 디버그 로그나 Alert로 제대로 눌리는지 확인
-            console.log('플러스 버튼 눌림');
-            // Alert.alert('DEBUG', '플러스 버튼 눌렸습니다');
-            // (2) CreatePost 화면으로 네비게이트
-            navigation.navigate('CreatePost');
-          }}
+          onPress={() =>
+            navigation.navigate('CreatePost', { username })
+          }
         >
           <Text style={styles.plusText}>＋</Text>
         </TouchableOpacity>
-
       </View>
 
-      {/* 스포츠 카테고리 프레임 */}
+      {/* Category */}
       <View style={styles.categoryContainer}>
-        <TouchableOpacity style={styles.categoryItem}>
-          <Image source={require('../assets/basketball.png')} style={styles.icon} />
-          <Text style={styles.categoryLabel}>농구</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.categoryItem}>
-          <Image source={require('../assets/soccer-ball-variant.png')} style={styles.icon} />
-          <Text style={styles.categoryLabel}>축구</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.categoryItem}>
-          <Image source={require('../assets/baseball-ball.png')} style={styles.icon} />
-          <Text style={styles.categoryLabel}>야구</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.categoryItem}>
-          <Image source={require('../assets/volleyball-ball.png')} style={styles.icon} />
-          <Text style={styles.categoryLabel}>배구</Text>
-        </TouchableOpacity>
+        {['농구', '축구', '야구', '배구'].map(sport => (
+          <TouchableOpacity
+            key={sport}
+            style={[
+              styles.categoryItem,
+              selectedCategory === sport && { backgroundColor: '#D0EBFF', borderRadius: 10 },
+            ]}
+            onPress={() =>
+              setSelectedCategory(selectedCategory === sport ? null : sport)
+            }
+          >
+            <Image source={categoryIcons[sport]} style={styles.icon} />
+            <Text style={styles.categoryLabel}>{sport}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
-      {/* 하단 내비게이션 바 */}
+      {/* Post List */}
+
+      <FlatList
+        data={filteredPosts}
+        keyExtractor={(item) => item._id}
+        renderItem={({ item }) => (
+          <PostCard
+            post={item}
+            currentUser={username}
+            onDelete={() => handleDelete(item._id)}
+            onEdit={() => handleEdit(item)}
+          />
+        )}
+        contentContainerStyle={{ paddingBottom: 100, paddingTop: 10 }}
+        showsVerticalScrollIndicator={false}
+      />
+
+      {/* Bottom Navbar */}
       <View style={styles.navbar}>
-        <TouchableOpacity onPress={() => navigation.navigate({ name: 'PlaceSearch', params: {} })}>
-          <Image source={require('../assets/placeholder.png')} style={styles.navIcon} />
+        <TouchableOpacity
+          onPress={() =>
+            navigation.navigate('PlaceSearch', { username })
+          }
+        >
+          <Image
+            source={require('../assets/placeholder.png')}
+            style={styles.navIcon}
+          />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate('Home')}>
-          <Image source={require('../assets/home.png')} style={styles.navIcon} />
+        <TouchableOpacity
+          onPress={() =>
+            navigation.navigate('Home', { username })
+          }
+        >
+          <Image
+            source={require('../assets/home.png')}
+            style={styles.navIcon}
+          />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate('Chat')}>
-          <Image source={require('../assets/messenger.png')} style={styles.navIcon} />
+        <TouchableOpacity
+          onPress={() => navigation.navigate('MyProfile', { username })}
+        >
+          <Image
+            source={require('../assets/user.png')} // 적절한 프로필 아이콘
+            style={styles.navIcon}
+          />
         </TouchableOpacity>
-      </View>
-      <View>
-        {posts.map((post: any) => (
-          <View key={post._id} style={styles.card}>
-            <Text style={styles.cardTitle}>{post.category} - {post.content}</Text>
-            <Text style={styles.cardSub}>📍 {post.location} | ⏰ {post.time}</Text>
-            <Text style={styles.cardSub}>인원: {post.participants}/{post.maxParticipants}</Text>
-          </View>
-        ))}
       </View>
     </View>
   );
@@ -108,63 +200,69 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   logo: {
-    width: 60, height: 60, marginRight: 10,
+    width: 60,
+    height: 60,
+    marginRight: 10,
   },
   title: {
-    color: '#000', fontSize: 18, fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   subtitle: {
-    color: '#000', fontSize: 14,
+    fontSize: 14,
   },
   plusButton: {
-    width: 30, height: 30, backgroundColor: '#fff', borderRadius: 15,
-    alignItems: 'center', justifyContent: 'center',
+    width: 30,
+    height: 30,
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   plusText: {
-    fontSize: 20, fontWeight: 'bold', color: '#000',
+    fontSize: 20,
+    fontWeight: 'bold',
   },
   categoryContainer: {
-    flexDirection: 'row', justifyContent: 'space-around',
-    backgroundColor: '#fff', borderRadius: 12, paddingVertical: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingVertical: 10,
     marginBottom: 30,
   },
   categoryItem: {
     alignItems: 'center',
   },
   icon: {
-    width: 40, height: 40,
+    width: 40,
+    height: 40,
   },
   categoryLabel: {
-    marginTop: 6, fontSize: 12, color: '#000',
+    marginTop: 6,
+    fontSize: 12,
+  },
+  list: {
+    flex: 1,
   },
   navbar: {
-    position: 'absolute', bottom: 40, left: 0, right: 0,
-    paddingHorizontal: 40, flexDirection: 'row', justifyContent: 'space-between',
-  },
-  navIcon: {
-    width: 30, height: 30,
-  },
-  card: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center', // 🔼 아이콘 수직 정렬
+    paddingVertical: 14,  // 🔼 상하 여백을 넉넉히
+    paddingBottom: Platform.OS === 'android' ? 20 : 14, // 🔼 하단 터치 영역 확보
+    borderTopWidth: 1,
+    borderColor: '#ddd',
     backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 5,
-    elevation: 2,
+    height: 80, // 🔥 터치 영역 넓히기 (원래는 생략해도 되지만 명시적으로 설정 가능)
   },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 5,
-  },
-  cardSub: {
-    fontSize: 13,
-    color: '#555',
+  
+  navIcon: {
+    width: 30,
+    height: 30,
   },
 });
+
+
 
 

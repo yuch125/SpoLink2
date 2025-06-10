@@ -13,14 +13,27 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/RootStackParamList';
 import axios from 'axios';
+import { RouteProp } from '@react-navigation/native';
+
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SERVER_URL } from '../constants';
 
+type CreatePostRouteProp = RouteProp<RootStackParamList, 'CreatePost'>;
 type CreatePostNavProp = NativeStackNavigationProp<RootStackParamList, 'CreatePost'>;
 
 export default function CreatePostScreen() {
   const navigation = useNavigation<CreatePostNavProp>();
-  const route = useRoute();
+  const route = useRoute<RouteProp<RootStackParamList, 'CreatePost'>>();
+if (!route.params?.username) {
+  console.error('❌ CreatePostScreen: username이 전달되지 않았습니다!');
+  Alert.alert('오류', '로그인 정보가 누락되었습니다. 다시 로그인해주세요.');
+  navigation.navigate('Login'); // 또는 navigation.goBack();
+  return null; // 화면 렌더링 중단
+}
+
+const username = route.params.username;
+
+
 
   const [category, setCategory] = useState('');
   const [content, setContent] = useState('');
@@ -56,18 +69,38 @@ export default function CreatePostScreen() {
       time,
       location,
       detail,
-      writer: '유저닉네임', // 추후 로그인 사용자로 대체
+      writer: username,  // ← 닉네임 저장
+      maxParticipants: 12,
+      participants: 0,
+      expiresAt,
     };
 
     try {
       await axios.post(`${SERVER_URL}/posts`, newPost, {
         headers: { 'Content-Type': 'application/json' },
       });
-      Alert.alert('모집 카드가 생성되었습니다!');
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Home' }],
-      });
+
+      Alert.alert(
+        '모집 카드가 생성되었습니다!',
+        '',
+        [
+          {
+            text: '확인',
+            onPress: () => {
+              navigation.reset({
+                index: 0,
+                routes: [
+                  {
+                    name: 'Home',
+                    params: { username }, // ✅ 여기 꼭 전달
+                  },
+                ],
+              });
+            },
+          },
+        ],
+        { cancelable: false }
+      );
     } catch (err: any) {
       console.error('❌ 카드 생성 실패:', err.response?.data || err.message);
       Alert.alert('카드 생성 중 오류가 발생했습니다.');
@@ -114,6 +147,7 @@ export default function CreatePostScreen() {
         onPress={() => {
           navigation.navigate('PlaceSearch', {
             from: 'CreatePost',
+            username,                            // 로그인 유저
             prevData: { category, content, time, detail },
           });
         }}

@@ -4,7 +4,6 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const getPostModel = require('../models/Post');
 const Post = getPostModel(mongoose);
-
 // 모집 카드 생성
 router.post('/', async (req, res) => {
   try {
@@ -35,7 +34,7 @@ router.post('/', async (req, res) => {
 router.get('/', async (req, res) => {
   const now = new Date();
   try {
-    const posts = await Post.find({ expiresAt: { $gt: now } }).sort({ createdAt: -1 });
+    const posts = await Post.find().populate('writer', 'username nickname profileImage'); // ✅ 이 줄!
     res.json(posts);
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -43,5 +42,26 @@ router.get('/', async (req, res) => {
 });
 
 module.exports = router;
+//삭제 기능
+router.delete('/:id', async (req, res) => {
+  try {
+    const Post = getPostModel(mongoose);
+    await Post.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: '삭제 실패' });
+  }
+});
 
-
+// 모집 카드 수정
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updated = await Post.findByIdAndUpdate(id, req.body, { new: true });
+    if (!updated) return res.status(404).json({ error: 'Post not found' });
+    res.json(updated);
+  } catch (err) {
+    console.error('❌ 수정 오류:', err);
+    res.status(500).json({ error: '수정 실패' });
+  }
+});

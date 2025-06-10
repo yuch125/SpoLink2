@@ -30,6 +30,9 @@
       "eas": {
         "projectId": "c5efc6b7-66c4-44b1-86e9-605716559581"
       }
+    },
+    "packagerOpts": {
+      "hostType": "lan"
     }
   }
 }

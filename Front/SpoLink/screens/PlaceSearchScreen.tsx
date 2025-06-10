@@ -10,6 +10,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Keyboard,
+  Alert,
 } from 'react-native';
 import * as Location from 'expo-location';
 import axios from 'axios';
@@ -21,11 +22,21 @@ import { KAKAO_API_KEY } from '../config';
 type PlaceSearchNavProp = NativeStackNavigationProp<RootStackParamList, 'PlaceSearch'>;
 type PlaceSearchRouteProp = RouteProp<RootStackParamList, 'PlaceSearch'>;
 
-const FACILITY_KEYWORDS = ['체육관', '농구장', '축구장','농구','야구','야구장','배구','배구장','축구'];
+const FACILITY_KEYWORDS = ['체육관', '농구장', '축구장', '농구', '야구', '야구장', '배구', '배구장', '축구'];
 
 const PlaceSearchScreen: React.FC = () => {
   const navigation = useNavigation<PlaceSearchNavProp>();
   const route = useRoute<PlaceSearchRouteProp>();
+
+  const username = route.params?.username;
+  console.log('🔍 PlaceSearchScreen route.params.username:', username);
+
+  // ✅ username이 없으면 뒤로가기 처리
+  if (!username) {
+    Alert.alert('오류', '사용자 정보가 누락되었습니다. 다시 시도해주세요.');
+    navigation.goBack();
+    return null;
+  }
 
   const [keyword, setKeyword] = useState<string>('체육관');
   const [locationCoords, setLocationCoords] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -33,7 +44,6 @@ const PlaceSearchScreen: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // 1) 위치 권한 요청 및 현재 위치 세팅
   useEffect(() => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -47,20 +57,18 @@ const PlaceSearchScreen: React.FC = () => {
     })();
   }, []);
 
-  // 2) locationCoords가 세팅되면 기기 위치 기준으로 최초 자동 검색 (기본: '체육관')
   useEffect(() => {
     if (locationCoords) {
       searchPlaces('체육관');
     }
   }, [locationCoords]);
 
-  // 3) 장소 검색 함수
   const searchPlaces = async (query: string) => {
     if (!locationCoords) {
       setErrorMsg('위치 정보가 없습니다.');
       return;
     }
-    // 운동시설 키워드 검사
+
     if (!FACILITY_KEYWORDS.some((k) => query.includes(k))) {
       setErrorMsg('체육관, 농구장, 축구장만 검색 가능합니다.');
       setKeyword('체육관');
@@ -72,19 +80,16 @@ const PlaceSearchScreen: React.FC = () => {
 
     try {
       const { latitude, longitude } = locationCoords;
-      const response = await axios.get(
-        'https://dapi.kakao.com/v2/local/search/keyword.json',
-        {
-          params: {
-            query,
-            x: longitude.toString(),
-            y: latitude.toString(),
-            radius: 5000,
-            size: 15,
-          },
-          headers: { Authorization: `KakaoAK ${KAKAO_API_KEY}` },
-        }
-      );
+      const response = await axios.get('https://dapi.kakao.com/v2/local/search/keyword.json', {
+        params: {
+          query,
+          x: longitude.toString(),
+          y: latitude.toString(),
+          radius: 5000,
+          size: 15,
+        },
+        headers: { Authorization: `KakaoAK ${KAKAO_API_KEY}` },
+      });
       const docs: KakaoPlace[] = response.data.documents;
       setPlaces(docs);
       if (docs.length === 0) {
@@ -99,18 +104,18 @@ const PlaceSearchScreen: React.FC = () => {
     }
   };
 
-  // 4) FlatList 아이템 렌더러
   const renderItem = ({ item }: { item: KakaoPlace }) => {
     return (
       <TouchableOpacity
         style={styles.itemContainer}
         onPress={() => {
-          // ── 호출한 화면이 CreatePost인지 아닌지 확인
           if (route.params?.from === 'CreatePost') {
-            // “CreatePost에서 온 경우” → CreatePost로 돌아가며 selectedPlace 파라미터로 장소 이름 전송
-            navigation.navigate('CreatePost', { selectedPlace: item.place_name });
+            navigation.navigate('CreatePost', {
+              username, // ✅ 반드시 포함
+              selectedPlace: item.place_name,
+              prevData: route.params.prevData,
+            });
           } else {
-            // “그 외(예: HomeScreen 등)에서 온 경우” → PlaceDetail로 이동(원래대로)
             navigation.navigate('PlaceDetail', { place: item });
           }
         }}
@@ -119,7 +124,8 @@ const PlaceSearchScreen: React.FC = () => {
         <Text style={styles.address}>{item.address_name || '주소 정보 없음'}</Text>
         {item.distance && (
           <Text style={styles.distance}>
-            거리: {parseInt(item.distance, 10) < 1000
+            거리:{' '}
+            {parseInt(item.distance, 10) < 1000
               ? `${item.distance} m`
               : `${(parseInt(item.distance, 10) / 1000).toFixed(1)} km`}
           </Text>
@@ -129,7 +135,6 @@ const PlaceSearchScreen: React.FC = () => {
     );
   };
 
-  // 5) 로딩/에러 UI
   if (loading && places.length === 0 && !errorMsg) {
     return (
       <View style={styles.center}>
@@ -150,10 +155,7 @@ const PlaceSearchScreen: React.FC = () => {
           onSubmitEditing={() => searchPlaces(keyword)}
           returnKeyType="search"
         />
-        <TouchableOpacity
-          style={styles.searchButton}
-          onPress={() => searchPlaces(keyword)}
-        >
+        <TouchableOpacity style={styles.searchButton} onPress={() => searchPlaces(keyword)}>
           <Text style={styles.searchButtonText}>검색</Text>
         </TouchableOpacity>
       </View>

@@ -23,7 +23,20 @@ const { width } = Dimensions.get('window');
 
 export default function PlaceDetailScreen() {
   const route = useRoute<PlaceDetailRouteProp>();
-  const { place } = route.params!; // PlaceSearch를 통해 넘어온 KakaoPlace 객체
+
+  console.log('✅ PlaceDetail route.params →', route.params);
+  
+  const place = route.params?.place;
+  
+
+
+  if (!place) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>❌ 장소 정보가 없습니다.</Text>
+      </View>
+    );
+  }
 
   // 사용자 현재 위치
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -170,9 +183,9 @@ export default function PlaceDetailScreen() {
                 const a =
                   Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
                   Math.cos(φ1) *
-                    Math.cos(φ2) *
-                    Math.sin(Δλ / 2) *
-                    Math.sin(Δλ / 2);
+                  Math.cos(φ2) *
+                  Math.sin(Δλ / 2) *
+                  Math.sin(Δλ / 2);
                 const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
                 const d = R * c; // 미터 단위
                 return d < 1000
