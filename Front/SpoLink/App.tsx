@@ -16,7 +16,6 @@ import EditPostScreen from './screens/EditPostScreen';
 import MyProfileScreen from './screens/MyProfileScreen'; 
 
 
-
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
@@ -37,7 +36,12 @@ export default function App() {
         <Stack.Screen name="PlaceSearch" component={PlaceSearchScreen} />
         <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
         <Stack.Screen name="EditPost" component={EditPostScreen} />
-        <Stack.Screen name="MyProfile" component={MyProfileScreen} />
+        {/* 프로필 보기/수정 스크린 */}
+      <Stack.Screen
+        name="MyProfile"
+        component={MyProfileScreen}
+        options={{ title: '프로필' }}
+      />
       </Stack.Navigator>
     </NavigationContainer>
   );

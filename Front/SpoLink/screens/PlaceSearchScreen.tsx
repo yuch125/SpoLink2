@@ -29,7 +29,6 @@ const PlaceSearchScreen: React.FC = () => {
   const route = useRoute<PlaceSearchRouteProp>();
 
   const username = route.params?.username;
-  console.log('🔍 PlaceSearchScreen route.params.username:', username);
 
   // ✅ username이 없으면 뒤로가기 처리
   if (!username) {

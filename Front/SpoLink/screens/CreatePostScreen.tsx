@@ -1,4 +1,3 @@
-// screens/CreatePostScreen.tsx
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -14,7 +13,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/RootStackParamList';
 import axios from 'axios';
 import { RouteProp } from '@react-navigation/native';
-
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SERVER_URL } from '../constants';
 
@@ -23,27 +21,30 @@ type CreatePostNavProp = NativeStackNavigationProp<RootStackParamList, 'CreatePo
 
 export default function CreatePostScreen() {
   const navigation = useNavigation<CreatePostNavProp>();
-  const route = useRoute<RouteProp<RootStackParamList, 'CreatePost'>>();
-if (!route.params?.username) {
-  console.error('❌ CreatePostScreen: username이 전달되지 않았습니다!');
-  Alert.alert('오류', '로그인 정보가 누락되었습니다. 다시 로그인해주세요.');
-  navigation.navigate('Login'); // 또는 navigation.goBack();
-  return null; // 화면 렌더링 중단
-}
+  const route = useRoute<CreatePostRouteProp>();
 
-const username = route.params.username;
+  if (!route.params?.username) {
+    console.error('❌ CreatePostScreen: username이 전달되지 않았습니다!');
+    Alert.alert('오류', '로그인 정보가 누락되었습니다. 다시 로그인해주세요.');
+    navigation.navigate('Login');
+    return null;
+  }
 
-
+  const username = route.params.username;
 
   const [category, setCategory] = useState('');
   const [content, setContent] = useState('');
-  const [time, setTime] = useState('');
   const [location, setLocation] = useState('');
   const [detail, setDetail] = useState('');
   const [expiresAt, setExpiresAt] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [maxParticipants, setMaxParticipants] = useState(12);
 
-  // 1. 장소를 선택하면 상태에 반영
+  const [startTime, setStartTime] = useState<Date | null>(null);
+  const [endTime, setEndTime] = useState<Date | null>(null);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [isSelectingStartTime, setIsSelectingStartTime] = useState(true);
+
   useEffect(() => {
     if ((route as any).params?.selectedPlace) {
       setLocation((route as any).params.selectedPlace);
@@ -58,10 +59,24 @@ const username = route.params.username;
   };
 
   const handleSubmit = async () => {
-    if (!category || !content || !time || !location || !detail) {
+    if (!category || !content || !startTime || !endTime || !location || !detail) {
       Alert.alert('모든 항목을 입력해 주세요.');
       return;
     }
+
+    // ✅ null이 아님이 보장된 상태에서 시간 순서 비교
+    if (startTime.getTime() >= endTime.getTime()) {
+      Alert.alert('시간 설정 오류', '시작 시간은 종료 시간보다 이전이어야 합니다.');
+      return;
+    }
+
+    const time = `${startTime.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    })}~${endTime.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    })}`;
 
     const newPost = {
       category,
@@ -69,9 +84,9 @@ const username = route.params.username;
       time,
       location,
       detail,
-      writer: username,  // ← 닉네임 저장
-      maxParticipants: 12,
-      participants: 0,
+      writer: username,
+      maxParticipants,
+      participants: 1,
       expiresAt,
     };
 
@@ -80,27 +95,17 @@ const username = route.params.username;
         headers: { 'Content-Type': 'application/json' },
       });
 
-      Alert.alert(
-        '모집 카드가 생성되었습니다!',
-        '',
-        [
-          {
-            text: '확인',
-            onPress: () => {
-              navigation.reset({
-                index: 0,
-                routes: [
-                  {
-                    name: 'Home',
-                    params: { username }, // ✅ 여기 꼭 전달
-                  },
-                ],
-              });
-            },
+      Alert.alert('모집 카드가 생성되었습니다!', '', [
+        {
+          text: '확인',
+          onPress: () => {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Home', params: { username } }],
+            });
           },
-        ],
-        { cancelable: false }
-      );
+        },
+      ]);
     } catch (err: any) {
       console.error('❌ 카드 생성 실패:', err.response?.data || err.message);
       Alert.alert('카드 생성 중 오류가 발생했습니다.');
@@ -135,20 +140,48 @@ const username = route.params.username;
         value={content}
         onChangeText={setContent}
       />
-      <TextInput
-        placeholder="시간 (예: 18:00~20:00)"
-        style={styles.input}
-        value={time}
-        onChangeText={setTime}
-      />
+
+      {/* 시간 선택 UI */}
+      <View style={[styles.input, { flexDirection: 'row', justifyContent: 'space-between' }]}>
+        <TouchableOpacity onPress={() => { setIsSelectingStartTime(true); setShowTimePicker(true); }}>
+          <Text style={styles.timeText}>
+            {startTime
+              ? startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              : '시작 시간'}
+          </Text>
+        </TouchableOpacity>
+        <Text> ~ </Text>
+        <TouchableOpacity onPress={() => { setIsSelectingStartTime(false); setShowTimePicker(true); }}>
+          <Text style={styles.timeText}>
+            {endTime
+              ? endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              : '종료 시간'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {showTimePicker && (
+        <DateTimePicker
+          mode="time"
+          value={(isSelectingStartTime ? startTime : endTime) || new Date()}
+          is24Hour={true}
+          display={Platform.OS === 'android' ? 'spinner' : 'default'}
+          onChange={(event, date) => {
+            setShowTimePicker(false);
+            if (date) {
+              isSelectingStartTime ? setStartTime(date) : setEndTime(date);
+            }
+          }}
+        />
+      )}
 
       <TouchableOpacity
         style={[styles.input, styles.locationBox]}
         onPress={() => {
           navigation.navigate('PlaceSearch', {
             from: 'CreatePost',
-            username,                            // 로그인 유저
-            prevData: { category, content, time, detail },
+            username,
+            prevData: { category, content, detail },
           });
         }}
       >
@@ -172,6 +205,7 @@ const username = route.params.username;
           모집 마감시간: {expiresAt.toLocaleString()}
         </Text>
       </TouchableOpacity>
+
       {showDatePicker && (
         <DateTimePicker
           value={expiresAt}
@@ -180,6 +214,16 @@ const username = route.params.username;
           onChange={onChangeDate}
         />
       )}
+
+      <View style={styles.inputContainer}>
+        <Text>최대 참가자 수:</Text>
+        <TextInput
+          keyboardType="numeric"
+          value={String(maxParticipants)}
+          onChangeText={(text) => setMaxParticipants(Number(text))}
+          style={styles.textInput}
+        />
+      </View>
 
       <TouchableOpacity style={styles.button} onPress={handleSubmit}>
         <Text style={styles.buttonText}>모임 만들기</Text>
@@ -238,4 +282,18 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   buttonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+  inputContainer: {
+    marginBottom: 12,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 10,
+    borderRadius: 8,
+    fontSize: 16,
+  },
+  timeText: {
+    fontSize: 16,
+    color: '#000',
+  },
 });
