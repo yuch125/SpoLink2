@@ -1,7 +1,6 @@
 // models/Post.js
 
 module.exports = (mongoose) => {
-  // 이미 등록된 모델이 있다면 그걸 반환 (에러 방지)
   if (mongoose.models.Post) {
     return mongoose.model('Post');
   }
@@ -13,10 +12,13 @@ module.exports = (mongoose) => {
     location: String,
     detail: String,
     writer: String,
-    participants: {
-      type: Number,
-      default: 0,
-    },
+    // ✅ 여러 명의 참가자 저장
+    applicants: [
+      {
+        username: String,
+        accepted: { type: Boolean, default: false },
+      },
+    ],
     maxParticipants: {
       type: Number,
       default: 12,

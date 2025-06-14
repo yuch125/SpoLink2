@@ -1,3 +1,5 @@
+// server.js
+
 console.log('✅ server.js 진입 시작: 파일 정상 실행');
 
 const express = require('express');
@@ -19,16 +21,13 @@ console.log('✨ (디버깅) MONGO_URI =', process.env.MONGODB_URI);
 app.use(express.json());
 
 // ─────────────────────────────────────────────
-// 2. Mongoose 사용자 스키마 및 모델
+// 2. 사용자 모델 불러오기 (models/User.js 사용)
 // ─────────────────────────────────────────────
-const userSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  nickname: { type: String },
-  profileImage: { type: String },
-  bio: { type: String },
-});
-const User = mongoose.model('User', userSchema);
+const User = require('../models/User');
+const applicationRoutes = require('../routes/applications');
+app.use('/applications', applicationRoutes);
+const usersRouter = require('../routes/users'); // ✅ 정확한 상대경로
+app.use('/users', usersRouter); // ✅ 경로 등록 필수
 
 // ─────────────────────────────────────────────
 // 3. 사용자 API
@@ -163,7 +162,8 @@ mongoose
       } catch (err) {
         console.error('자동 삭제 에러:', err);
       }
-    }, 10 * 60 * 1000);
+    }, 10 * 60 * 100000);
+
 
     // [서버 시작]
     app.listen(PORT, () => {

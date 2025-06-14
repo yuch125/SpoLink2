@@ -1,5 +1,3 @@
-
-
 // navigation/RootStackParamList.ts
 
 export type KakaoPlace = {
@@ -26,7 +24,9 @@ export type RootStackParamList = {
       detail?: string;
     };
   };
-  
+  Applications: { username: string };
+  MyApplicationList: { username: string };
+
   MyProfile: {
     username: string;
   };

@@ -1,9 +1,11 @@
+// post.js
 const express = require('express');
 const router = express.Router();
 
 const mongoose = require('mongoose');
 const getPostModel = require('../models/Post');
 const Post = getPostModel(mongoose);
+module.exports = router;
 // 모집 카드 생성
 router.post('/', async (req, res) => {
   try {
@@ -41,7 +43,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-module.exports = router;
 //삭제 기능
 router.delete('/:id', async (req, res) => {
   try {
@@ -63,5 +64,57 @@ router.put('/:id', async (req, res) => {
   } catch (err) {
     console.error('❌ 수정 오류:', err);
     res.status(500).json({ error: '수정 실패' });
+  }
+});
+// 참가 신청 기능
+router.post('/apply', async (req, res) => {
+  const { postId, username,accepted} = req.body;
+
+  if (!postId || !username) {
+    return res.status(400).json({ error: 'postId나 username이 없습니다' });
+  }
+
+  try {
+    const post = await Post.findById(postId);
+    if (!post) return res.status(404).json({ error: '해당 모집글이 없습니다' });
+
+    if (!post.applicants) post.applicants = [];
+
+    const alreadyApplied = post.applicants.some(app => app.username === username);
+    if (alreadyApplied) {
+      return res.status(400).json({ error: '이미 신청했습니다' });
+    }
+
+    post.applicants.push({ username, accepted: false }); // 기본은 미수락
+    await post.save();
+
+    res.json({ message: '✅ 참가 신청 완료!' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
+router.post('/apply/respond', async (req, res) => {
+  const { postId, username, accepted } = req.body;
+
+  if (!postId || !username || typeof accepted !== 'boolean') {
+    return res.status(400).json({ error: '필수 정보 누락' });
+  }
+
+  try {
+    const post = await Post.findById(postId);
+    if (!post) return res.status(404).json({ error: '모집글 없음' });
+
+    const applicant = post.applicants.find(a => a.username === username);
+    if (!applicant) return res.status(404).json({ error: '신청자 없음' });
+
+    applicant.accepted = accepted;
+    await post.save();
+
+    res.json({ message: `✅ ${accepted ? '수락' : '거절'} 처리 완료` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: '서버 오류' });
   }
 });

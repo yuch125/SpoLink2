@@ -28,7 +28,7 @@ import type {
 import PostCard from '../components/PostCard';
 import { FlatList } from 'react-native';
 import { SERVER_URL } from '../constants';  // ← 수정된 import
-
+import ApplicationsScreen from '../screens/ApplicationsScreen';
 type HomeNavProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 type HomeRouteProp = RouteProp<RootStackParamList, 'Home'>;
 
@@ -181,6 +181,14 @@ export default function HomeScreen() {
             style={styles.navIcon}
           />
         </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Applications', { username })}
+        >
+          <Image
+            source={require('../assets/writing.png')} // 👉 신청자 목록 아이콘 추가
+            style={styles.navIcon}
+          />
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -256,14 +264,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     height: 80, // 🔥 터치 영역 넓히기 (원래는 생략해도 되지만 명시적으로 설정 가능)
   },
-  
+
   navIcon: {
     width: 30,
     height: 30,
   },
 });
-
-
 
 
 

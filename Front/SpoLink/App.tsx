@@ -14,7 +14,7 @@ import PlaceSearchScreen from './screens/PlaceSearchScreen';
 import PlaceDetailScreen from './screens/PlaceDetailScreen';
 import EditPostScreen from './screens/EditPostScreen';
 import MyProfileScreen from './screens/MyProfileScreen'; 
-
+import ApplicationsScreen from './screens/ApplicationsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -42,6 +42,7 @@ export default function App() {
         component={MyProfileScreen}
         options={{ title: '프로필' }}
       />
+       <Stack.Screen name="Applications" component={ApplicationsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

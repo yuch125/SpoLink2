@@ -1,7 +1,10 @@
 // components/PostCard.tsx
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import type {Post} from '../navigation/RootStackParamList'
+import type { Post } from '../navigation/RootStackParamList'
+import { SERVER_URL } from '../constants';
+import axios from 'axios';
+import { Alert } from 'react-native';
 
 
 type Props = {
@@ -10,8 +13,28 @@ type Props = {
   onDelete: () => void;
   onEdit: () => void;
 };
+
+
 export default function PostCard({ post, currentUser, onDelete, onEdit }: Props) {
-  const isOwner = currentUser === post.writer as any;
+  const writerName = typeof post.writer === 'string' ? post.writer : post.writer.username;
+  const isOwner = currentUser === writerName;
+  const handleApply = async () => {
+    console.log('🟢 참가신청 버튼 클릭됨', post._id, currentUser); // ← 요거!
+    try {
+      await axios.post(`${SERVER_URL}/posts/apply`, {
+        postId: post._id,
+        username: currentUser,
+      });
+      Alert.alert('✅ 참가 신청 완료', '주최자가 수락할 때까지 기다려주세요.');
+    } catch (err: any) {
+      console.error('❌ 신청 실패:', err.response?.data || err.message);
+      if (err.response?.data?.error === '이미 신청했습니다') {
+        Alert.alert('⚠️ 중복 신청', '이미 신청한 모집입니다.');
+      } else {
+        Alert.alert('❌ 오류', '참가 신청 중 문제가 발생했습니다.');
+      }
+    }
+  };
 
   return (
     <View style={styles.card}>
@@ -29,9 +52,11 @@ export default function PostCard({ post, currentUser, onDelete, onEdit }: Props)
       </Text>
 
       {/* 참가 신청 버튼 */}
-      <TouchableOpacity style={styles.joinButton}>
-        <Text style={styles.joinText}>참가 신청</Text>
-      </TouchableOpacity>
+      {!isOwner && (
+        <TouchableOpacity style={styles.applyButton} onPress={handleApply}>
+          <Text style={styles.buttonText}>참가 신청</Text>
+        </TouchableOpacity>
+      )}
 
       {isOwner && (
         <View style={styles.buttonContainer}>
@@ -60,7 +85,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     overflow: 'hidden', // ✅ 내부 요소 잘림 방지
   },
-  
+
   writer: {
     fontWeight: 'bold',
     fontSize: 14,
@@ -105,4 +130,17 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     marginBottom: 4,
   },
+  applyButton: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+
 });
