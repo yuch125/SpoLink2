@@ -15,7 +15,7 @@ export default function NicknameSetupScreen() {
   const route = useRoute<NicknameSetupRouteProp>();
   const navigation = useNavigation<NicknameSetupNavProp>();
 
-  const { userId, token } = route.params;
+  const { userId, token, loginId } = route.params; // username → loginId로 변경
   const [nickname, setNickname] = useState('');
 
   const handleSave = async () => {
@@ -25,7 +25,10 @@ export default function NicknameSetupScreen() {
       });
 
       Alert.alert('✅ 닉네임 설정 완료!');
-      navigation.replace('Home', { username: nickname });
+      navigation.replace('Home', {
+        userId: loginId, // username → userId로 명확히
+        nickname,
+      });
     } catch (err: any) {
       Alert.alert('❌ 에러 발생', err.message);
     }

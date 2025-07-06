@@ -6,17 +6,17 @@ import { SERVER_URL } from '../constants';
 import PostCard from './PostCard';
 
 type Props = {
-  username: string;
+  userId: string;
 };
 
-export default function MyPostList({ username }: Props) {
+export default function MyPostList({ userId }: Props) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchPosts = async () => {
     try {
       const res = await axios.get(`${SERVER_URL}/posts`);
-      const myPosts = res.data.filter((p: Post) => p.writer.username === username);
+      const myPosts = res.data.filter((p: Post) => p.writer.userId === userId); // userId 기준 비교
       setPosts(myPosts);
     } catch (err) {
       console.error('❌ 내 모집글 불러오기 실패:', err);
@@ -40,7 +40,6 @@ export default function MyPostList({ username }: Props) {
   };
 
   const handleEdit = (post: Post) => {
-    // 이 함수는 필요에 따라 navigation 넘기거나 props에서 받아와야 함
     Alert.alert('수정 기능은 아직 연결 안됨');
   };
 
@@ -56,7 +55,7 @@ export default function MyPostList({ username }: Props) {
       renderItem={({ item }) => (
         <PostCard
           post={item}
-          currentUser={username}
+          currentUser={userId}
           onDelete={() => handleDelete(item._id)}
           onEdit={() => handleEdit(item)}
         />

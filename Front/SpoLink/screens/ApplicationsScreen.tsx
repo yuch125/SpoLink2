@@ -1,4 +1,5 @@
-// 
+// screens/ApplicationsScreen.tsx
+
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -18,13 +19,13 @@ type ApplicationsRouteProp = RouteProp<RootStackParamList, 'Applications'>;
 type Application = {
   _id: string;
   content: string;
-  writer: string;
-  applicants: { username: string; accepted: boolean }[];
+  writer: { _id: string; nickname?: string };
+  applicants: { userId: string; accepted: boolean }[];
 };
 
 export default function ApplicationsScreen() {
   const route = useRoute<ApplicationsRouteProp>();
-  const username = route.params?.username ?? '';
+  const { userId } = route.params;
 
   const [posts, setPosts] = useState<Application[]>([]);
 
@@ -32,7 +33,10 @@ export default function ApplicationsScreen() {
     const fetchData = async () => {
       try {
         const res = await axios.get(`${SERVER_URL}/posts`);
-        const myPosts = res.data.filter((p: any) => p.writer === username);
+        const myPosts = res.data.filter((p: any) => {
+          const writerId = typeof p.writer === 'string' ? p.writer : p.writer?._id;
+          return writerId === userId;
+        });
         setPosts(myPosts);
         console.log('✅ 받아온 posts:', myPosts);
       } catch (err) {
@@ -41,17 +45,16 @@ export default function ApplicationsScreen() {
       }
     };
     fetchData();
-  }, []);
+  }, [userId]);
 
-  const respondTo = async (postId: string, target: string, accepted: boolean) => {
+  const respondTo = async (postId: string, targetId: string, accepted: boolean) => {
     try {
       await axios.post(`${SERVER_URL}/posts/apply/respond`, {
         postId,
-        username: target,
+        userId: targetId,
         accepted,
       });
 
-      // 상태 업데이트: 수락이면 accepted true, 거절이면 아예 제거
       setPosts((prev) =>
         prev.map((p) =>
           p._id === postId
@@ -59,9 +62,9 @@ export default function ApplicationsScreen() {
                 ...p,
                 applicants: accepted
                   ? p.applicants.map((a) =>
-                      a.username === target ? { ...a, accepted: true } : a
+                      a.userId === targetId ? { ...a, accepted: true } : a
                     )
-                  : p.applicants.filter((a) => a.username !== target),
+                  : p.applicants.filter((a) => a.userId !== targetId),
               }
             : p
         )
@@ -84,14 +87,14 @@ export default function ApplicationsScreen() {
           {item.applicants?.length > 0 ? (
             item.applicants.map((app, i) => (
               <View key={i} style={styles.applicantBox}>
-                <Text style={styles.name}>{app.username}</Text>
+                <Text style={styles.name}>{app.userId}</Text>
                 <Text style={styles.status}>
                   {app.accepted ? '✅ 수락됨' : '🕓 대기중'}
                 </Text>
                 {app.accepted ? (
                   <TouchableOpacity
                     onPress={() =>
-                      respondTo(item._id, app.username, false)
+                      respondTo(item._id, app.userId, false)
                     }
                   >
                     <Text style={{ color: 'orange' }}>수락 취소</Text>
@@ -100,14 +103,14 @@ export default function ApplicationsScreen() {
                   <View style={styles.buttons}>
                     <TouchableOpacity
                       onPress={() =>
-                        respondTo(item._id, app.username, true)
+                        respondTo(item._id, app.userId, true)
                       }
                     >
                       <Text style={{ color: 'green' }}>수락</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() =>
-                        respondTo(item._id, app.username, false)
+                        respondTo(item._id, app.userId, false)
                       }
                     >
                       <Text style={{ color: 'red', marginLeft: 10 }}>

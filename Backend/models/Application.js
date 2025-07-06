@@ -1,9 +1,16 @@
 const mongoose = require('mongoose');
 
 const applicationSchema = new mongoose.Schema({
-  username: { type: String, required: true },  // 신청자 닉네임
+  applicant: {
+    userId: { type: String, required: true },      // 로그인 ID
+    nickname: { type: String, required: true },    // 사용자 표시용
+  },
   post: { type: mongoose.Schema.Types.ObjectId, ref: 'Post' },
-  status: { type: String, enum: ['pending', 'accepted'], default: 'pending' },
+  status: {
+    type: String,
+    enum: ['pending', 'accepted'],
+    default: 'pending',
+  },
 });
 
-module.exports = mongoose.model('application', applicationSchema);
+module.exports = mongoose.model('Application', applicationSchema);

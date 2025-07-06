@@ -27,12 +27,8 @@ import type {
 } from '../navigation/RootStackParamList';
 import PostCard from '../components/PostCard';
 import { FlatList } from 'react-native';
-import { SERVER_URL } from '../constants';  // ← 수정된 import
-import ApplicationsScreen from '../screens/ApplicationsScreen';
-type HomeNavProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
-type HomeRouteProp = RouteProp<RootStackParamList, 'Home'>;
+import { SERVER_URL } from '../constants';
 
-// 📌 카테고리별 아이콘 맵 (정적 require)
 const categoryIcons: Record<string, any> = {
   농구: require('../assets/basketball.png'),
   축구: require('../assets/soccer-ball-variant.png'),
@@ -40,7 +36,11 @@ const categoryIcons: Record<string, any> = {
   배구: require('../assets/volleyball-ball.png'),
 };
 
+type HomeNavProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
+type HomeRouteProp = RouteProp<RootStackParamList, 'Home'>;
+
 export default function HomeScreen() {
+  
   const navigation = useNavigation<HomeNavProp>();
   const route = useRoute<HomeRouteProp>();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -48,25 +48,21 @@ export default function HomeScreen() {
   const filteredPosts = selectedCategory
     ? posts.filter(post => post.category === selectedCategory)
     : posts;
-  const username = route.params?.username;
-
-  // ① username 누락 시 useEffect 안에서 리다이렉트
+  const { userId, nickname } = route.params;
+  console.log('📦 userId:', userId, 'nickname:', nickname);
   useEffect(() => {
-    if (!username) {
+    console.log(userId, nickname)
+    if (!userId || !nickname) {
       console.warn(
-        '⚠️ HomeScreen: username param missing → redirect to Login'
+        '⚠️ HomeScreen: userId param missing → redirect to Login'
       );
       navigation.replace('Login');
     }
-  }, [username, navigation]);
+  }, [userId, nickname]);
 
-  // ② username이 없으면 렌더링하지 않음
-  if (!username) {
+  if (!userId) {
     return null;
   }
-
-
-
 
   useFocusEffect(
     useCallback(() => {
@@ -90,12 +86,11 @@ export default function HomeScreen() {
   };
 
   const handleEdit = (post: Post) => {
-    navigation.navigate('EditPost', { post });
+    navigation.navigate('EditPost', { post, userId, nickname });
   };
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <Image
           source={require('../assets/Logo.png')}
@@ -108,14 +103,13 @@ export default function HomeScreen() {
         <TouchableOpacity
           style={styles.plusButton}
           onPress={() =>
-            navigation.navigate('CreatePost', { username })
+            navigation.navigate('CreatePost', { userId, nickname, })
           }
         >
           <Text style={styles.plusText}>＋</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Category */}
       <View style={styles.categoryContainer}>
         {['농구', '축구', '야구', '배구'].map(sport => (
           <TouchableOpacity
@@ -134,15 +128,13 @@ export default function HomeScreen() {
         ))}
       </View>
 
-      {/* Post List */}
-
       <FlatList
         data={filteredPosts}
         keyExtractor={(item) => item._id}
         renderItem={({ item }) => (
           <PostCard
             post={item}
-            currentUser={username}
+            currentUser={userId}
             onDelete={() => handleDelete(item._id)}
             onEdit={() => handleEdit(item)}
           />
@@ -151,11 +143,10 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      {/* Bottom Navbar */}
       <View style={styles.navbar}>
         <TouchableOpacity
           onPress={() =>
-            navigation.navigate('PlaceSearch', { username })
+            navigation.navigate('PlaceSearch', { userId, nickname })
           }
         >
           <Image
@@ -165,7 +156,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() =>
-            navigation.navigate('Home', { username })
+            navigation.navigate('Home', { userId, nickname })
           }
         >
           <Image
@@ -174,18 +165,18 @@ export default function HomeScreen() {
           />
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => navigation.navigate('MyProfile', { username })}
+          onPress={() => navigation.navigate('MyProfile', { userId})}
         >
           <Image
-            source={require('../assets/user.png')} // 적절한 프로필 아이콘
+            source={require('../assets/user.png')}
             style={styles.navIcon}
           />
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => navigation.navigate('Applications', { username })}
+          onPress={() => navigation.navigate('Applications', { userId })}
         >
           <Image
-            source={require('../assets/writing.png')} // 👉 신청자 목록 아이콘 추가
+            source={require('../assets/writing.png')}
             style={styles.navIcon}
           />
         </TouchableOpacity>
@@ -256,21 +247,16 @@ const styles = StyleSheet.create({
   navbar: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    alignItems: 'center', // 🔼 아이콘 수직 정렬
-    paddingVertical: 14,  // 🔼 상하 여백을 넉넉히
-    paddingBottom: Platform.OS === 'android' ? 20 : 14, // 🔼 하단 터치 영역 확보
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingBottom: Platform.OS === 'android' ? 20 : 14,
     borderTopWidth: 1,
     borderColor: '#ddd',
     backgroundColor: '#fff',
-    height: 80, // 🔥 터치 영역 넓히기 (원래는 생략해도 되지만 명시적으로 설정 가능)
+    height: 80,
   },
-
   navIcon: {
     width: 30,
     height: 30,
   },
 });
-
-
-
-

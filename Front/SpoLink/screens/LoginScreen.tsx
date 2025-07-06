@@ -1,50 +1,52 @@
 // screens/LoginScreen.tsx
 
-import React, { useState } from 'react';
+import React, { useState} from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootStackParamList';
 import { SERVER_URL } from '../constants';
-
 import axios from 'axios';
-
+import { useProfile } from '../contexts/ProfileContext';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
 export default function LoginScreen() {
+  const { setProfile } = useProfile(); // 추가
   const navigation = useNavigation<NavigationProp>();
   const [showSignup, setShowSignup] = useState(false);
-  const [username, setUsername] = useState('');
+  const [userIdInput, setUserIdInput] = useState('');
   const [password, setPassword] = useState('');
-  const [newUsername, setNewUsername] = useState('');
+  const [newUserId, setNewUserId] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
   const handleLogin = async () => {
-    if (!username || !password) {
+    if (!userIdInput || !password) {
       Alert.alert('입력 오류', '아이디와 비밀번호를 입력해주세요.');
       return;
     }
 
     try {
       const res = await axios.post(`${SERVER_URL}/login`, {
-        username: username.trim(),
+        username: userIdInput.trim(),
         password: password.trim(),
       });
-
+      const loginData = res.data; // ✅ 여기에 선언돼야 함
       const data = res.data;
       if (data.success) {
         Alert.alert('환영합니다!', `${data.nickname}님, 로그인 성공!`);
-        setUsername('');
+        setUserIdInput('');
         setPassword('');
 
         if (!data.nickname || data.nickname.trim() === '') {
           navigation.navigate('NicknameSetup', {
             userId: data.userId,
             token: data.token,
+            loginId: data.username,
           });
         } else {
           navigation.navigate('Home', {
-            username: data.nickname,
+            userId: loginData.userId,
+            nickname: loginData.nickname
           });
         }
       } else {
@@ -57,7 +59,7 @@ export default function LoginScreen() {
   };
 
   const handleSignup = async () => {
-    if (!newUsername || !newPassword) {
+    if (!newUserId || !newPassword) {
       Alert.alert('입력 오류', '모든 필드를 입력해주세요.');
       return;
     }
@@ -68,7 +70,7 @@ export default function LoginScreen() {
 
     try {
       const res = await axios.post(`${SERVER_URL}/signup`, {
-        username: newUsername,
+        username: newUserId,
         password: newPassword,
         nickname: '',
         profileImage: '',
@@ -79,29 +81,34 @@ export default function LoginScreen() {
       if (data.success) {
         Alert.alert('회원가입 완료');
 
-        // 자동 로그인
         const loginRes = await axios.post(`${SERVER_URL}/login`, {
-          username: newUsername.trim(),
+          username: newUserId.trim(),
           password: newPassword.trim(),
         });
 
         const loginData = loginRes.data;
         if (loginData.success) {
-          Alert.alert('환영합니다!', `${newUsername}님, 자동 로그인 성공!`);
-          setUsername('');
+          Alert.alert('환영합니다!', `${newUserId}님, 자동 로그인 성공!`);
+          setUserIdInput('');
           setPassword('');
-          setNewUsername('');
+          setNewUserId('');
           setNewPassword('');
           setShowSignup(false);
-
+          setProfile({
+            userId: data.userId,
+            nickname: data.nickname,
+          });
           if (!loginData.nickname || loginData.nickname.trim() === '') {
             navigation.navigate('NicknameSetup', {
               userId: loginData.userId,
               token: loginData.token,
+              loginId: loginData.username,
             });
           } else {
+            console.log(loginData)
             navigation.navigate('Home', {
-              username: loginData.nickname,
+              userId: loginData.userId,
+              nickname: loginData.nickname,
             });
           }
         } else {
@@ -123,8 +130,8 @@ export default function LoginScreen() {
         <TextInput
           style={styles.input}
           placeholder="아이디"
-          value={newUsername}
-          onChangeText={setNewUsername}
+          value={newUserId}
+          onChangeText={setNewUserId}
           autoCapitalize="none"
         />
         <TextInput
@@ -151,8 +158,8 @@ export default function LoginScreen() {
       <TextInput
         style={styles.input}
         placeholder="아이디"
-        value={username}
-        onChangeText={setUsername}
+        value={userIdInput}
+        onChangeText={setUserIdInput}
         autoCapitalize="none"
       />
       <TextInput
@@ -223,4 +230,3 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
 });
-

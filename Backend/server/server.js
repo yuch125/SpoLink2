@@ -1,7 +1,9 @@
 // server.js
-
 console.log('✅ server.js 진입 시작: 파일 정상 실행');
 
+// ─────────────────────────────────────────────
+// 📦 0. 의존성 및 환경 설정
+// ─────────────────────────────────────────────
 const express = require('express');
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
@@ -11,27 +13,41 @@ require('dotenv').config({ path: __dirname + '/../.env' });
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// 디버깅 로그
 console.log('✨ (디버깅) __dirname =', __dirname);
 console.log('✨ (디버깅) process.cwd() =', process.cwd());
-console.log('✨ (디버깅) MONGO_URI =', process.env.MONGODB_URI);
+console.log('✨ (디버깅) MONGODB_URI =', process.env.MONGODB_URI);
 
 // ─────────────────────────────────────────────
-// 1. 미들웨어 설정
+// 🛠️ 1. 미들웨어 설정
 // ─────────────────────────────────────────────
 app.use(express.json());
 
 // ─────────────────────────────────────────────
-// 2. 사용자 모델 불러오기 (models/User.js 사용)
+// 👤 2. 사용자 모델 & 라우터 불러오기
 // ─────────────────────────────────────────────
 const User = require('../models/User');
 const applicationRoutes = require('../routes/applications');
-app.use('/applications', applicationRoutes);
-const usersRouter = require('../routes/users'); // ✅ 정확한 상대경로
-app.use('/users', usersRouter); // ✅ 경로 등록 필수
+const usersRouter = require('../routes/users');
+const commentRoutes = require('../routes/comments');
+const postsRouter = require('../routes/posts');
 
 // ─────────────────────────────────────────────
-// 3. 사용자 API
+// 🔗 3. 라우터 등록
 // ─────────────────────────────────────────────
+app.use('/applications', applicationRoutes);
+app.use('/users', usersRouter);
+app.use('/comments', commentRoutes);
+app.use('/posts', postsRouter);
+
+// ─────────────────────────────────────────────
+// 🔧 4. 유틸성 API
+// ─────────────────────────────────────────────
+
+// [GET] /status - 서버 상태 확인
+app.get('/status', (req, res) => {
+  res.json({ success: true, message: '서버 정상 작동 중' });
+});
 
 // [GET] /users - 전체 사용자 조회
 app.get('/users', async (req, res) => {
@@ -43,10 +59,9 @@ app.get('/users', async (req, res) => {
   }
 });
 
-// [GET] /status - 서버 상태 확인
-app.get('/status', (req, res) => {
-  res.json({ success: true, message: '서버 정상 작동 중' });
-});
+// ─────────────────────────────────────────────
+// 🔐 5. 회원가입 & 로그인 API
+// ─────────────────────────────────────────────
 
 // [POST] /signup - 회원가입
 app.post('/signup', async (req, res) => {
@@ -59,7 +74,6 @@ app.post('/signup', async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
     await User.create({
       username,
       password: hashedPassword,
@@ -131,11 +145,12 @@ app.put('/users/:id', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// 4. MongoDB 연결 및 서버 실행
+// 🔌 6. MongoDB 연결 및 서버 실행
 // ─────────────────────────────────────────────
 mongoose.connection.on('connected', () => {
   console.log('✅ Mongoose가 실제로 연결되었습니다!');
 });
+
 mongoose.connection.on('error', (err) => {
   console.error('❌ Mongoose 연결 에러 발생:', err);
 });
@@ -145,11 +160,7 @@ mongoose
   .then(() => {
     console.log('✅ MongoDB 연결 성공!');
 
-    // [라우터 등록] 모집 카드 기능
-    const postsRouter = require('../routes/posts');
-    app.use('/posts', postsRouter);
-
-    // [자동 삭제 기능] 마감된 카드 제거
+    // [🧹 자동 삭제 기능] 마감된 모집 카드 제거
     const getPostModel = require('../models/Post');
     const Post = getPostModel(mongoose);
     setInterval(async () => {
@@ -162,10 +173,9 @@ mongoose
       } catch (err) {
         console.error('자동 삭제 에러:', err);
       }
-    }, 10 * 60 * 100000);
+    }, 10 * 60 * 100000); // 10분마다 실행 (← 단위 조정 필요 가능성 있음)
 
-
-    // [서버 시작]
+    // [🚀 서버 시작]
     app.listen(PORT, () => {
       console.log(`🚀 서버가 포트 ${PORT}에서 실행됨`);
     });

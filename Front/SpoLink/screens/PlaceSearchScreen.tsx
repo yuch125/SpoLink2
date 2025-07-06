@@ -28,20 +28,23 @@ const PlaceSearchScreen: React.FC = () => {
   const navigation = useNavigation<PlaceSearchNavProp>();
   const route = useRoute<PlaceSearchRouteProp>();
 
-  const username = route.params?.username;
-
-  // ✅ username이 없으면 뒤로가기 처리
-  if (!username) {
-    Alert.alert('오류', '사용자 정보가 누락되었습니다. 다시 시도해주세요.');
-    navigation.goBack();
-    return null;
-  }
+  const userId = route.params?.userId!;
+  const nickname = route.params?.nickname ?? '';
+  const prevData = route.params?.prevData;
+  const post = route.params?.post;
 
   const [keyword, setKeyword] = useState<string>('체육관');
   const [locationCoords, setLocationCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [places, setPlaces] = useState<KakaoPlace[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!userId) {
+      Alert.alert('오류', '사용자 정보가 누락되었습니다. 다시 시도해주세요.');
+      navigation.goBack();
+    }
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -103,36 +106,54 @@ const PlaceSearchScreen: React.FC = () => {
     }
   };
 
-  const renderItem = ({ item }: { item: KakaoPlace }) => {
-    return (
-      <TouchableOpacity
-        style={styles.itemContainer}
-        onPress={() => {
-          if (route.params?.from === 'CreatePost') {
-            navigation.navigate('CreatePost', {
-              username, // ✅ 반드시 포함
-              selectedPlace: item.place_name,
-              prevData: route.params.prevData,
-            });
-          } else {
-            navigation.navigate('PlaceDetail', { place: item });
-          }
-        }}
-      >
-        <Text style={styles.placeName}>{item.place_name}</Text>
-        <Text style={styles.address}>{item.address_name || '주소 정보 없음'}</Text>
-        {item.distance && (
-          <Text style={styles.distance}>
-            거리:{' '}
-            {parseInt(item.distance, 10) < 1000
-              ? `${item.distance} m`
-              : `${(parseInt(item.distance, 10) / 1000).toFixed(1)} km`}
-          </Text>
-        )}
-        {item.phone ? <Text style={styles.phone}>{item.phone}</Text> : null}
-      </TouchableOpacity>
-    );
+  const handleSelect = (placeName: string) => {
+    if (route.params?.from === 'CreatePost') {
+      navigation.navigate('CreatePost', {
+        userId,
+        nickname,
+        selectedPlace: placeName,
+        prevData,
+      });
+    } else if (route.params?.from === 'EditPost' && post) {
+      navigation.navigate('EditPost', {
+        userId,
+        nickname,
+        selectedPlace: placeName,
+        post,
+      });
+    }
   };
+
+  const handleDetail = (place: KakaoPlace) => {
+    navigation.navigate('PlaceDetail', { place });
+  };
+
+  const renderItem = ({ item }: { item: KakaoPlace }) => (
+    <View style={styles.itemContainer}>
+      <Text style={styles.placeName}>{item.place_name}</Text>
+      <Text style={styles.address}>{item.address_name || '주소 정보 없음'}</Text>
+      {item.distance && (
+        <Text style={styles.distance}>
+          거리:{' '}
+          {parseInt(item.distance, 10) < 1000
+            ? `${item.distance} m`
+            : `${(parseInt(item.distance, 10) / 1000).toFixed(1)} km`}
+        </Text>
+      )}
+      {item.phone ? <Text style={styles.phone}>{item.phone}</Text> : null}
+
+      <View style={styles.buttonRow}>
+        <TouchableOpacity style={styles.selectButton} onPress={() => handleSelect(item.place_name)}>
+          <Text style={styles.buttonText}>📍 장소 선택</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.detailButton} onPress={() => handleDetail(item)}>
+          <Text style={styles.buttonText}>🗺️ 정보 보기</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  if (!userId) return null;
 
   if (loading && places.length === 0 && !errorMsg) {
     return (
@@ -144,7 +165,6 @@ const PlaceSearchScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* 검색창 */}
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.input}
@@ -159,14 +179,12 @@ const PlaceSearchScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {/* 오류 메시지 */}
       {errorMsg && (
         <View style={styles.center}>
           <Text style={{ color: 'red' }}>{errorMsg}</Text>
         </View>
       )}
 
-      {/* 검색 결과 리스트 */}
       {!loading && places.length > 0 && (
         <FlatList
           data={places}
@@ -176,7 +194,6 @@ const PlaceSearchScreen: React.FC = () => {
         />
       )}
 
-      {/* 결과 있는 상태에서 추가 로딩 */}
       {loading && places.length > 0 && (
         <View style={styles.loadingMore}>
           <ActivityIndicator size="small" color="#1E90FF" />
@@ -234,5 +251,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 12,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 8,
+  },
+  selectButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  detailButton: {
+    backgroundColor: '#888',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+  },
+  buttonText: {
+    color: 'white',
+    fontWeight: '600',
   },
 });

@@ -149,12 +149,6 @@ export default function PlaceDetailScreen() {
           {place.phone || '정보 없음'}
         </Text>
 
-        {/* 좌표 */}
-        <Text style={styles.label}>좌표 (위도, 경도):</Text>
-        <Text style={styles.text}>
-          {latitude.toFixed(6)}, {longitude.toFixed(6)}
-        </Text>
-
         {/* API에서 넘어온 거리 (m) */}
         {parsedDistance !== null && (
           <>
@@ -197,12 +191,6 @@ export default function PlaceDetailScreen() {
         )}
 
         {/* 구글맵 보기 버튼 */}
-        <TouchableOpacity
-          style={styles.mapButton}
-          onPress={openInGoogleMaps}
-        >
-          <Text style={styles.mapButtonText}>구글 맵에서 보기</Text>
-        </TouchableOpacity>
       </View>
     </ScrollView>
   );

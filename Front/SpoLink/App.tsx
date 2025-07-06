@@ -15,11 +15,13 @@ import PlaceDetailScreen from './screens/PlaceDetailScreen';
 import EditPostScreen from './screens/EditPostScreen';
 import MyProfileScreen from './screens/MyProfileScreen'; 
 import ApplicationsScreen from './screens/ApplicationsScreen';
+import { ProfileProvider } from './contexts/ProfileContext';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
   return (
+    <ProfileProvider>
     <NavigationContainer>
       <Stack.Navigator
         initialRouteName="Login"
@@ -30,7 +32,6 @@ export default function App() {
         <Stack.Screen
           name="Home"
           component={HomeScreen}
-          initialParams={{ username: '' }}
         />
         <Stack.Screen name="CreatePost" component={CreatePostScreen} />
         <Stack.Screen name="PlaceSearch" component={PlaceSearchScreen} />
@@ -45,6 +46,7 @@ export default function App() {
        <Stack.Screen name="Applications" component={ApplicationsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
+      
+    </ProfileProvider>
   );
 }
-

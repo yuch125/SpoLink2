@@ -23,14 +23,15 @@ export default function CreatePostScreen() {
   const navigation = useNavigation<CreatePostNavProp>();
   const route = useRoute<CreatePostRouteProp>();
 
-  if (!route.params?.username) {
-    console.error('❌ CreatePostScreen: username이 전달되지 않았습니다!');
+  const userId = route.params?.userId;
+  const nickname = route.params?.nickname;  // 이 줄 추가!
+  console.log('🚩 nickname:', nickname);
+  if (!userId) {
+    console.error('❌ CreatePostScreen: userId가 전달되지 않았습니다!');
     Alert.alert('오류', '로그인 정보가 누락되었습니다. 다시 로그인해주세요.');
     navigation.navigate('Login');
     return null;
   }
-
-  const username = route.params.username;
 
   const [category, setCategory] = useState('');
   const [content, setContent] = useState('');
@@ -46,10 +47,10 @@ export default function CreatePostScreen() {
   const [isSelectingStartTime, setIsSelectingStartTime] = useState(true);
 
   useEffect(() => {
-    if ((route as any).params?.selectedPlace) {
-      setLocation((route as any).params.selectedPlace);
+    if (route.params?.selectedPlace) {
+      setLocation(route.params.selectedPlace);
     }
-  }, [(route as any).params?.selectedPlace]);
+  }, [route.params?.selectedPlace]);
 
   const onChangeDate = (event: any, selectedDate?: Date) => {
     setShowDatePicker(Platform.OS === 'ios');
@@ -64,7 +65,6 @@ export default function CreatePostScreen() {
       return;
     }
 
-    // ✅ null이 아님이 보장된 상태에서 시간 순서 비교
     if (startTime.getTime() >= endTime.getTime()) {
       Alert.alert('시간 설정 오류', '시작 시간은 종료 시간보다 이전이어야 합니다.');
       return;
@@ -84,12 +84,15 @@ export default function CreatePostScreen() {
       time,
       location,
       detail,
-      writer: username,
+      writer: {
+        userId,
+        nickname,
+      },
       maxParticipants,
       participants: 1,
       expiresAt,
     };
-
+    console.log('🧾 생성 요청 데이터:', newPost);
     try {
       await axios.post(`${SERVER_URL}/posts`, newPost, {
         headers: { 'Content-Type': 'application/json' },
@@ -101,7 +104,7 @@ export default function CreatePostScreen() {
           onPress: () => {
             navigation.reset({
               index: 0,
-              routes: [{ name: 'Home', params: { username } }],
+              routes: [{ name: 'Home', params: { userId, nickname } }],
             });
           },
         },
@@ -121,10 +124,7 @@ export default function CreatePostScreen() {
         {['농구', '축구', '야구', '배구'].map((sport) => (
           <TouchableOpacity
             key={sport}
-            style={[
-              styles.sportButton,
-              category === sport && styles.sportButtonSelected,
-            ]}
+            style={[styles.sportButton, category === sport && styles.sportButtonSelected]}
             onPress={() => setCategory(sport)}
           >
             <Text style={category === sport ? styles.sportTextSelected : styles.sportText}>
@@ -141,21 +141,16 @@ export default function CreatePostScreen() {
         onChangeText={setContent}
       />
 
-      {/* 시간 선택 UI */}
       <View style={[styles.input, { flexDirection: 'row', justifyContent: 'space-between' }]}>
         <TouchableOpacity onPress={() => { setIsSelectingStartTime(true); setShowTimePicker(true); }}>
           <Text style={styles.timeText}>
-            {startTime
-              ? startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-              : '시작 시간'}
+            {startTime ? startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '시작 시간'}
           </Text>
         </TouchableOpacity>
         <Text> ~ </Text>
         <TouchableOpacity onPress={() => { setIsSelectingStartTime(false); setShowTimePicker(true); }}>
           <Text style={styles.timeText}>
-            {endTime
-              ? endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-              : '종료 시간'}
+            {endTime ? endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '종료 시간'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -180,7 +175,8 @@ export default function CreatePostScreen() {
         onPress={() => {
           navigation.navigate('PlaceSearch', {
             from: 'CreatePost',
-            username,
+            userId,
+            nickname,
             prevData: { category, content, detail },
           });
         }}

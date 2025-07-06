@@ -13,9 +13,10 @@ export type KakaoPlace = {
 
 export type RootStackParamList = {
   Login: undefined;
-  Home: { username: string };
+  Home: { userId: string, nickname: string; };
   CreatePost: {
-    username: string;
+    userId: string;
+    nickname?: string;
     selectedPlace?: string;
     prevData?: {
       category?: string;
@@ -24,32 +25,31 @@ export type RootStackParamList = {
       detail?: string;
     };
   };
-  Applications: { username: string };
-  MyApplicationList: { username: string };
-
+  Applications: { userId: string };
+  MyApplicationList: { userId: string };
   MyProfile: {
-    username: string;
+    userId: string;
   };
-
   PlaceSearch: {
-    from?: 'CreatePost';
+    from?: 'CreatePost' | 'EditPost';
     prevData?: {
       category?: string;
       content?: string;
       time?: string;
       detail?: string;
     };
-    username?: string;
+    userId?: string;
+    nickname?: string;
   };
-  EditPost: { post: Post };
+  EditPost: { post: Post; userId: string; nickname: string; selectedPlace?:string };
   Chat: undefined;
   PlaceDetail: { place: KakaoPlace };
-  NicknameSetup: { userId: string; token: string };
+  NicknameSetup: { userId: string; token: string; loginId: string; };
 };
 
 export interface UserProfile {
   _id: string;
-  username: string;
+  userId: string;
   nickname?: string;
   profileImage?: string;
 }
@@ -65,14 +65,13 @@ export type Post = {
   writer: {
     _id: string;
     nickname: string;
-    username?: string;
+    userId?: string;
     profileImage?: string;
   };
   participants: number;
   maxParticipants: number;
   expiresAt: string;
 };
-
 
 
 

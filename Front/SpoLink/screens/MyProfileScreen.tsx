@@ -1,5 +1,4 @@
 // screens/MyProfileScreen.tsx
-
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -12,7 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import axios from 'axios';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import PostCard from '../components/PostCard';
 import { SERVER_URL } from '../constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -25,52 +24,53 @@ type Application = {
   post?: Post;
 };
 
-type MyProfileRouteProp = NativeStackNavigationProp<RootStackParamList, 'MyProfile'>;
+type MyProfileRouteProp = RouteProp<RootStackParamList, 'MyProfile'>;
+type MyProfileNavProp = NativeStackNavigationProp<RootStackParamList, 'MyProfile'>;
 
 export default function MyProfileScreen() {
-  const route = useRoute();
-  const navigation = useNavigation<MyProfileRouteProp>();
-  const { username } = route.params as { username: string };
+  const route = useRoute<MyProfileRouteProp>();
+  const navigation = useNavigation<MyProfileNavProp>();
+  const { userId } = route.params;
 
-  const [nickname, setNickname] = useState(username);
+  const [nickname, setNickname] = useState('');
   const [intro, setIntro] = useState('');
   const [editing, setEditing] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
 
   useEffect(() => {
-    // 모집 글 불러오기 (username 기준)
+    // ✅ 모집 글 불러오기
     axios.get(`${SERVER_URL}/posts`).then((res) => {
       const myPosts = res.data.filter((p: Post) => {
-        const writerName = typeof p.writer === 'string' ? p.writer : p.writer?.username;
-        return writerName === username;
+        const writerId = typeof p.writer === 'string' ? p.writer : p.writer?._id;
+        return writerId === userId;
       });
       setPosts(myPosts);
     });
 
-    // 내가 신청한 글
-    axios.get(`${SERVER_URL}/applications`, { params: { username } })
+    // ✅ 내가 신청한 글
+    axios.get(`${SERVER_URL}/applications`, { params: { userId } })
       .then((res) => setApplications(res.data));
 
-    // 사용자 정보 불러오기
-    axios.get(`${SERVER_URL}/users/${username}`).then((res) => {
-      setNickname(res.data.user.nickname || username);
+    // ✅ 사용자 정보 불러오기
+    axios.get(`${SERVER_URL}/users/id/${userId}`).then((res) => {
+      setNickname(res.data.user.nickname || '');
       setIntro(res.data.user.bio || '');
     });
-  }, [username]);
+  }, [userId]);
 
   const handleSaveNickname = async () => {
     console.log('🔄 닉네임 저장 시도');
-    console.log('📤 요청 URL:', `${SERVER_URL}/users/${username}`);
+    console.log('📤 요청 URL:', `${SERVER_URL}/users/id/${userId}`);
     console.log('📤 요청 데이터:', { newNickname: nickname, intro: intro });
 
     try {
-      const response = await axios.patch(`${SERVER_URL}/users/${username}`, {
+      const response = await axios.patch(`${SERVER_URL}/users/id/${userId}`, {
         newNickname: nickname,
         intro: intro,
       });
 
-      setNickname(response.data.user.nickname || username);
+      setNickname(response.data.user.nickname || '');
       setIntro(response.data.user.bio || '');
 
       Alert.alert('✅ 닉네임이 변경되었습니다');
@@ -136,9 +136,9 @@ export default function MyProfileScreen() {
         renderItem={({ item }) => (
           <PostCard
             post={item}
-            currentUser={username}
-            onEdit={() => { }}
-            onDelete={() => { }}
+            currentUser={userId}
+            onEdit={() => {}}
+            onDelete={() => {}}
           />
         )}
       />
@@ -151,9 +151,9 @@ export default function MyProfileScreen() {
           item.post ? (
             <PostCard
               post={item.post}
-              currentUser={username}
-              onEdit={() => { }}
-              onDelete={() => { }}
+              currentUser={userId}
+              onEdit={() => {}}
+              onDelete={() => {}}
             />
           ) : (
             <Text style={{ color: 'red' }}>❌ 모집글이 삭제되었거나 없습니다</Text>
