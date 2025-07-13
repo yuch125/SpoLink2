@@ -1,162 +1,205 @@
-// screens/ApplicationsScreen.tsx
-
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import {
   View,
   Text,
   FlatList,
-  StyleSheet,
   TouchableOpacity,
+  StyleSheet,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
+import io from 'socket.io-client';
 import axios from 'axios';
-import { RouteProp, useRoute } from '@react-navigation/native';
-import { RootStackParamList } from '../navigation/RootStackParamList';
+import {
+  useRoute,
+  useFocusEffect,
+  useNavigation,
+} from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
 import { SERVER_URL } from '../constants';
+import type { RootStackParamList } from '../navigation/RootStackParamList';
+import { useProfile } from '../contexts/ProfileContext';
 
 type ApplicationsRouteProp = RouteProp<RootStackParamList, 'Applications'>;
+type ApplicationsNavProp = NativeStackNavigationProp<RootStackParamList, 'Applications'>;
 
 type Application = {
   _id: string;
-  content: string;
-  writer: { _id: string; nickname?: string };
-  applicants: { userId: string; accepted: boolean }[];
+  status: 'pending' | 'accepted' | 'rejected';
+  applicant: {
+    userId: string;
+    nickname: string;
+  };
 };
+
+// Socket.IO 클라이언트 인스턴스
+const socket = io(SERVER_URL, { transports: ['websocket'] });
 
 export default function ApplicationsScreen() {
   const route = useRoute<ApplicationsRouteProp>();
-  const { userId } = route.params;
+  const navigation = useNavigation<ApplicationsNavProp>();
+  const { postId } = route.params;
+  const { profile } = useProfile();
+  const { userId, nickname } = profile;
 
-  const [posts, setPosts] = useState<Application[]>([]);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await axios.get(`${SERVER_URL}/posts`);
-        const myPosts = res.data.filter((p: any) => {
-          const writerId = typeof p.writer === 'string' ? p.writer : p.writer?._id;
-          return writerId === userId;
-        });
-        setPosts(myPosts);
-        console.log('✅ 받아온 posts:', myPosts);
-      } catch (err) {
-        console.error(err);
-        Alert.alert('불러오기 실패', '서버 오류');
-      }
-    };
-    fetchData();
-  }, [userId]);
-
-  const respondTo = async (postId: string, targetId: string, accepted: boolean) => {
+  // 신청 목록 불러오기
+  const fetchApplications = useCallback(async () => {
+    setLoading(true);
     try {
-      await axios.post(`${SERVER_URL}/posts/apply/respond`, {
-        postId,
-        userId: targetId,
-        accepted,
-      });
-
-      setPosts((prev) =>
-        prev.map((p) =>
-          p._id === postId
-            ? {
-                ...p,
-                applicants: accepted
-                  ? p.applicants.map((a) =>
-                      a.userId === targetId ? { ...a, accepted: true } : a
-                    )
-                  : p.applicants.filter((a) => a.userId !== targetId),
-              }
-            : p
-        )
+      const res = await axios.get<Application[]>(
+        `${SERVER_URL}/applications/post/${postId}`
       );
-
-      Alert.alert(`${accepted ? '수락' : '거절'} 완료`);
-    } catch (err) {
-      console.error(err);
-      Alert.alert('처리 실패');
+      setApplications(res.data);
+    } catch (err: any) {
+      console.error('❌ 신청 목록 오류:', err.response?.data || err.message);
+      Alert.alert('불러오기 실패', err.response?.data?.error || '서버 오류');
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [postId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchApplications();
+    }, [fetchApplications])
+  );
+
+  // 소켓 연결
+  useEffect(() => {
+    socket.on('connect', () => {
+      console.log('✅ Socket.IO connected:', socket.id);
+    });
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
+  // 참가 수락 핸들러
+  const handleAccept = useCallback(
+    async (
+      id: string,
+      applicant: { userId: string; nickname: string }
+    ) => {
+      try {
+        // 1) 수락 & chatRoomId 받기
+        const acceptRes = await axios.patch(
+          `${SERVER_URL}/applications/${id}/accept`
+        );
+        const chatRoomId: string = acceptRes.data.chatRoomId;
+        console.log('▶️ 받은 chatRoomId:', chatRoomId);
+
+        // 2) Socket.IO 룸 입장
+        socket.emit('joinRoom', { roomId: chatRoomId, userId: applicant.userId });
+        console.log(
+          `▶️ joinRoom 이벤트 발송 (roomId=${chatRoomId}, userId=${
+            applicant.userId
+          })`
+        );
+
+        // 3) 채팅방 화면으로 이동
+        navigation.navigate('ChatRoom', {
+          roomId: chatRoomId,
+          userId,
+          nickname,
+        });
+
+        Alert.alert('✅ 수락 완료', '채팅방으로 이동합니다.');
+        fetchApplications();
+      } catch (err: any) {
+        console.error(
+          '❌ 수락/채팅방 오류:',
+          err.response?.data || err.message
+        );
+        Alert.alert('오류', err.response?.data?.error || '서버 오류');
+      }
+    },
+    [fetchApplications, navigation, userId, nickname]
+  );
+
+  // 참가 거절 핸들러
+  const handleReject = useCallback(
+    async (id: string) => {
+      try {
+        await axios.patch(`${SERVER_URL}/applications/${id}/reject`);
+        Alert.alert('거절 완료');
+        fetchApplications();
+      } catch (err: any) {
+        console.error('❌ 거절 오류:', err.response?.data || err.message);
+        Alert.alert('거절 실패', err.response?.data?.error || '서버 오류');
+      }
+    },
+    [fetchApplications]
+  );
+
+  // 신청자 카드 렌더링
+  const renderItem = useCallback(
+    ({ item }: { item: Application }) => (
+      <View style={styles.card}>
+        <Text style={styles.name}>{item.applicant.nickname}</Text>
+        <Text style={styles.status}>
+          상태:{' '}
+          {item.status === 'pending'
+            ? '🕓 대기중'
+            : item.status === 'accepted'
+            ? '✅ 수락됨'
+            : '❌ 거절됨'}
+        </Text>
+
+        {item.status === 'pending' && (
+          <View style={styles.buttons}>
+            <TouchableOpacity
+              onPress={() => handleAccept(item._id, item.applicant)}
+            >
+              <Text style={styles.accept}>수락</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => handleReject(item._id)}>
+              <Text style={styles.reject}>거절</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    ),
+    [handleAccept, handleReject]
+  );
 
   return (
-    <FlatList
-      data={posts}
-      keyExtractor={(item) => item._id}
-      renderItem={({ item }) => (
-        <View style={styles.card}>
-          <Text style={styles.title}>{item.content}</Text>
-          {item.applicants?.length > 0 ? (
-            item.applicants.map((app, i) => (
-              <View key={i} style={styles.applicantBox}>
-                <Text style={styles.name}>{app.userId}</Text>
-                <Text style={styles.status}>
-                  {app.accepted ? '✅ 수락됨' : '🕓 대기중'}
-                </Text>
-                {app.accepted ? (
-                  <TouchableOpacity
-                    onPress={() =>
-                      respondTo(item._id, app.userId, false)
-                    }
-                  >
-                    <Text style={{ color: 'orange' }}>수락 취소</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <View style={styles.buttons}>
-                    <TouchableOpacity
-                      onPress={() =>
-                        respondTo(item._id, app.userId, true)
-                      }
-                    >
-                      <Text style={{ color: 'green' }}>수락</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() =>
-                        respondTo(item._id, app.userId, false)
-                      }
-                    >
-                      <Text style={{ color: 'red', marginLeft: 10 }}>
-                        거절
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-            ))
-          ) : (
-            <Text style={{ color: '#888' }}>신청자 없음</Text>
-          )}
-        </View>
+    <View style={styles.container}>
+      <Text style={styles.title}>신청자 목록</Text>
+      {loading ? (
+        <ActivityIndicator size="large" />
+      ) : (
+        <FlatList
+          data={applications}
+          keyExtractor={(item) => item._id}
+          renderItem={renderItem}
+          ListEmptyComponent={
+            <Text style={styles.empty}>신청자가 없습니다.</Text>
+          }
+        />
       )}
-    />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1, padding: 16, backgroundColor: '#fff' },
+  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 12 },
   card: {
-    backgroundColor: '#fff',
-    margin: 12,
-    padding: 16,
-    borderRadius: 12,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 10,
   },
-  title: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    marginBottom: 8,
-  },
-  applicantBox: {
-    paddingVertical: 4,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  name: {
-    fontWeight: '500',
-  },
-  status: {
-    marginLeft: 10,
-    color: '#007AFF',
-  },
-  buttons: {
-    flexDirection: 'row',
-  },
+  name: { fontSize: 16, fontWeight: '600' },
+  status: { fontSize: 14, color: '#555', marginTop: 4 },
+  buttons: { flexDirection: 'row', marginTop: 10 },
+  accept: { marginRight: 16, color: 'green', fontWeight: 'bold' },
+  reject: { color: 'red', fontWeight: 'bold' },
+  empty: { textAlign: 'center', marginTop: 40, color: '#888' },
 });

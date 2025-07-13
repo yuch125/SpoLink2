@@ -7,27 +7,18 @@ type Profile = {
 };
 
 type ProfileContextType = {
-  userId: string;
-  nickname: string;
+  profile: Profile;
+  
   setProfile: (profile: Profile) => void;
 };
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
 export const ProfileProvider = ({ children }: { children: React.ReactNode }) => {
-  const [profile, setProfile] = useState<Profile>({
-    userId: '',
-    nickname: '',
-  });
-
+  console.log('✅ ProfileProvider 렌더됨');
+  const [profile, setProfile] = useState<Profile>({ userId: '', nickname: '' });
   return (
-    <ProfileContext.Provider
-      value={{
-        userId: profile.userId,
-        nickname: profile.nickname,
-        setProfile,
-      }}
-    >
+    <ProfileContext.Provider value={{ profile, setProfile }}>
       {children}
     </ProfileContext.Provider>
   );
@@ -35,8 +26,6 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
 
 export const useProfile = () => {
   const context = useContext(ProfileContext);
-  if (!context) {
-    throw new Error('useProfile must be used within a ProfileProvider');
-  }
+  if (!context) throw new Error('useProfile must be used within a ProfileProvider');
   return context;
 };

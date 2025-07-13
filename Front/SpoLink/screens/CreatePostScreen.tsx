@@ -25,7 +25,7 @@ export default function CreatePostScreen() {
 
   const userId = route.params?.userId;
   const nickname = route.params?.nickname;  // 이 줄 추가!
-  console.log('🚩 nickname:', nickname);
+
   if (!userId) {
     console.error('❌ CreatePostScreen: userId가 전달되지 않았습니다!');
     Alert.alert('오류', '로그인 정보가 누락되었습니다. 다시 로그인해주세요.');

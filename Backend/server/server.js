@@ -8,9 +8,47 @@ const express = require('express');
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const http = require('http')
+const socketIo = require('socket.io');
 require('dotenv').config({ path: __dirname + '/../.env' });
-
 const app = express();
+const server = http.createServer(app)
+const io = socketIo(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST'],
+  },
+});
+
+// ✅ 메시지 DB 모델 import
+const Message = require('../models/Message');
+
+// ✅ Socket.IO 설정
+io.on('connection', (socket) => {
+  console.log('✅ 새 클라이언트 연결:', socket.id);
+
+  socket.on('joinRoom', ({ roomId, userId }) => {
+    socket.join(roomId);
+    console.log(`👥 ${userId}가 방(${roomId})에 입장함`);
+  });
+
+  socket.on('sendMessage', async ({ roomId, userId, nickname, content }) => {
+    const message = new Message({
+      roomId,
+      sender: { userId, nickname },
+      content,
+    });
+    await message.save();
+    io.to(roomId).emit('newMessage', message);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('❌ 클라이언트 연결 종료:', socket.id);
+  });
+});
+
+module.exports = { app, server };
+
 const PORT = process.env.PORT || 3000;
 
 // 디버깅 로그
@@ -31,7 +69,8 @@ const applicationRoutes = require('../routes/applications');
 const usersRouter = require('../routes/users');
 const commentRoutes = require('../routes/comments');
 const postsRouter = require('../routes/posts');
-
+const messageRoutes = require('../routes/messages');
+const chatRoomRoutes = require('../routes/chatrooms');
 // ─────────────────────────────────────────────
 // 🔗 3. 라우터 등록
 // ─────────────────────────────────────────────
@@ -39,6 +78,8 @@ app.use('/applications', applicationRoutes);
 app.use('/users', usersRouter);
 app.use('/comments', commentRoutes);
 app.use('/posts', postsRouter);
+app.use('/messages', messageRoutes)
+app.use('/chatrooms', chatRoomRoutes);
 
 // ─────────────────────────────────────────────
 // 🔧 4. 유틸성 API
@@ -176,7 +217,7 @@ mongoose
     }, 10 * 60 * 100000); // 10분마다 실행 (← 단위 조정 필요 가능성 있음)
 
     // [🚀 서버 시작]
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`🚀 서버가 포트 ${PORT}에서 실행됨`);
     });
   })

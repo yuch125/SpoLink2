@@ -12,6 +12,21 @@ export type KakaoPlace = {
 };
 
 export type RootStackParamList = {
+  ChatRoom: {
+    roomId: string;
+    userId: string;
+    nickname: string;
+  };
+  ChatList: { userId: string; nickname: string };
+  PostDetail: {
+    postId: string;
+    title: string;
+    content: string;
+    writerId: string;
+    writerNickname: string;
+    userId: string;
+    nickname: string;
+  };
   Login: undefined;
   Home: { userId: string, nickname: string; };
   CreatePost: {
@@ -25,11 +40,12 @@ export type RootStackParamList = {
       detail?: string;
     };
   };
-  Applications: { userId: string };
+  Applications: { userId?: string, postId?: string, nickname?: string, };
   MyApplicationList: { userId: string };
   MyProfile: {
     userId: string;
   };
+  Profile: {userId: string}
   PlaceSearch: {
     from?: 'CreatePost' | 'EditPost';
     prevData?: {
@@ -38,10 +54,11 @@ export type RootStackParamList = {
       time?: string;
       detail?: string;
     };
+    post?: Post;
     userId?: string;
     nickname?: string;
   };
-  EditPost: { post: Post; userId: string; nickname: string; selectedPlace?:string };
+  EditPost: { post: Post; userId: string; nickname: string; selectedPlace?: string };
   Chat: undefined;
   PlaceDetail: { place: KakaoPlace };
   NicknameSetup: { userId: string; token: string; loginId: string; };

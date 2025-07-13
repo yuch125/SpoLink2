@@ -1,5 +1,3 @@
-// components/CommentSection.tsx
-
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -11,25 +9,28 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import { SERVER_URL } from '../constants';
+import { useProfile } from '../contexts/ProfileContext'; // ✅ 추가
 
 interface Comment {
   _id: string;
   content: string;
-  nickname: string;
   createdAt: string;
+  nickname: string;
 }
 
 interface Props {
   postId: string;
-  userId: string;
-  nickname: string;
 }
 
-export default function CommentSection({ postId, userId, nickname }: Props) {
+export default function CommentSection({ postId }: Props) {
+  const { profile } = useProfile(); // ✅ 현재 로그인된 사용자 정보
+  console.log('🧪 profile:', profile);
+  const { userId, nickname } = profile;
+
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [expanded, setExpanded] = useState(false);
-    
+  
   const fetchComments = async () => {
     try {
       const res = await axios.get(`${SERVER_URL}/comments/${postId}`);
@@ -45,12 +46,24 @@ export default function CommentSection({ postId, userId, nickname }: Props) {
 
   const handleSubmit = async () => {
     if (!newComment.trim()) return;
+     // ⬇️ 이 줄 추가해!
+     if (!nickname || !userId) {
+      console.log('❌ 닉네임 또는 유저ID 없음:', { nickname, userId });
+      alert('닉네임 정보가 없습니다. 다시 로그인해주세요.');
+      return;
+    }
 
+  console.log('📨 댓글 전송 시도:', {
+    postId,
+    userId,
+    nickname: nickname,
+    content: newComment,
+  });
     try {
       const res = await axios.post(`${SERVER_URL}/comments`, {
         postId,
         userId,
-        nickname,
+        nickname: nickname,
         content: newComment,
       });
       setComments([res.data.comment, ...comments]);

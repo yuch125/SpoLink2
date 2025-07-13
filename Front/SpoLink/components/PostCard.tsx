@@ -4,6 +4,10 @@ import type { Post } from '../navigation/RootStackParamList';
 import { SERVER_URL } from '../constants';
 import axios from 'axios';
 import CommentSection from './CommentSection'; // ← 경로는 맞는지 꼭 확인!
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../navigation/RootStackParamList';
+import { useProfile } from '../contexts/ProfileContext'; // ✅ 추가
 
 type Props = {
   post: Post;
@@ -14,7 +18,10 @@ type Props = {
 
 export default function PostCard({ post, currentUser, onDelete, onEdit }: Props) {
   const [showComments, setShowComments] = useState(false);
-
+  const { profile } = useProfile();
+  const nickname = profile.nickname;
+  
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const writerId =
     typeof post.writer === 'string'
       ? post.writer
@@ -29,10 +36,13 @@ export default function PostCard({ post, currentUser, onDelete, onEdit }: Props)
 
   const handleApply = async () => {
     console.log('🟢 참가신청 버튼 클릭됨', post._id, currentUser);
+    console.log('✅ 신청에 들어갈 닉네임:', profile.nickname); // 🔍 여기!
+
     try {
-      await axios.post(`${SERVER_URL}/posts/apply`, {
+      await axios.post(`${SERVER_URL}/applications`, {
         postId: post._id,
         userId: currentUser,
+        nickname: profile.nickname,
       });
       Alert.alert('✅ 참가 신청 완료', '주최자가 수락할 때까지 기다려주세요.');
     } catch (err: any) {
@@ -74,6 +84,15 @@ export default function PostCard({ post, currentUser, onDelete, onEdit }: Props)
         </View>
       )}
 
+      {/* 신청자 관리 버튼 */}
+      {isOwner && (
+        <TouchableOpacity
+          style={styles.manageButton}
+          onPress={() => navigation.navigate('Applications', { postId: post._id })}
+        >
+          <Text style={styles.manageText}>신청자 관리</Text>
+        </TouchableOpacity>
+      )}
       {/* 댓글 접기/펼치기 버튼 */}
       <TouchableOpacity onPress={() => setShowComments(prev => !prev)} style={{ marginTop: 10 }}>
         <Text style={{ color: '#007AFF', fontWeight: 'bold' }}>
@@ -85,8 +104,6 @@ export default function PostCard({ post, currentUser, onDelete, onEdit }: Props)
       {showComments && (
         <CommentSection
           postId={post._id}
-          userId={currentUser}
-          nickname={writerNickname}
         />
       )}
     </View>
@@ -151,4 +168,15 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     marginBottom: 4,
   },
+  manageButton: {
+    marginTop: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#E8F0FE',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    alignItems: 'center',
+  },
+  manageText: { color: '#007AFF', fontWeight: 'bold' },
 });

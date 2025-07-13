@@ -32,7 +32,13 @@ export default function LoginScreen() {
       });
       const loginData = res.data; // ✅ 여기에 선언돼야 함
       const data = res.data;
+      console.log('✅ 로그인 응답 데이터:', data); // ✅ 여기에 로그 추가
+
       if (data.success) {
+        setProfile({
+          userId: data.userId,
+          nickname: data.nickname || '',
+        });
         Alert.alert('환영합니다!', `${data.nickname}님, 로그인 성공!`);
         setUserIdInput('');
         setPassword('');

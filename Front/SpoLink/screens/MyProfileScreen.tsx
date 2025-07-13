@@ -156,7 +156,7 @@ export default function MyProfileScreen() {
               onDelete={() => {}}
             />
           ) : (
-            <Text style={{ color: 'red' }}>❌ 모집글이 삭제되었거나 없습니다</Text>
+            <Text></Text>
           )
         }
       />

@@ -28,6 +28,7 @@ import type {
 import PostCard from '../components/PostCard';
 import { FlatList } from 'react-native';
 import { SERVER_URL } from '../constants';
+import { useProfile } from '../contexts/ProfileContext';
 
 const categoryIcons: Record<string, any> = {
   농구: require('../assets/basketball.png'),
@@ -37,18 +38,18 @@ const categoryIcons: Record<string, any> = {
 };
 
 type HomeNavProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
-type HomeRouteProp = RouteProp<RootStackParamList, 'Home'>;
+
 
 export default function HomeScreen() {
-  
+
+  const { profile } = useProfile();
+  const { userId, nickname } = profile; // 👈 여기서 가져오면 됨
   const navigation = useNavigation<HomeNavProp>();
-  const route = useRoute<HomeRouteProp>();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const filteredPosts = selectedCategory
     ? posts.filter(post => post.category === selectedCategory)
     : posts;
-  const { userId, nickname } = route.params;
   console.log('📦 userId:', userId, 'nickname:', nickname);
   useEffect(() => {
     console.log(userId, nickname)
@@ -86,7 +87,7 @@ export default function HomeScreen() {
   };
 
   const handleEdit = (post: Post) => {
-    navigation.navigate('EditPost', { post, userId, nickname });
+    navigation.navigate('EditPost', { post, userId, nickname, });
   };
 
   return (
@@ -132,16 +133,31 @@ export default function HomeScreen() {
         data={filteredPosts}
         keyExtractor={(item) => item._id}
         renderItem={({ item }) => (
-          <PostCard
-            post={item}
-            currentUser={userId}
-            onDelete={() => handleDelete(item._id)}
-            onEdit={() => handleEdit(item)}
-          />
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate('PostDetail', {
+                postId: item._id,
+                title: item.content,
+                content: item.detail,
+                writerId: item.writer.userId || '',
+                writerNickname: item.writer.nickname,
+                userId,
+                nickname,
+              })
+            }
+          >
+            <PostCard
+              post={item}
+              currentUser={userId}
+              onDelete={() => handleDelete(item._id)}
+              onEdit={() => handleEdit(item)}
+            />
+          </TouchableOpacity>
         )}
         contentContainerStyle={{ paddingBottom: 100, paddingTop: 10 }}
         showsVerticalScrollIndicator={false}
       />
+
 
       <View style={styles.navbar}>
         <TouchableOpacity
@@ -165,7 +181,7 @@ export default function HomeScreen() {
           />
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => navigation.navigate('MyProfile', { userId})}
+          onPress={() => navigation.navigate('MyProfile', { userId })}
         >
           <Image
             source={require('../assets/user.png')}
@@ -173,10 +189,10 @@ export default function HomeScreen() {
           />
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => navigation.navigate('Applications', { userId })}
+          onPress={() => navigation.navigate('ChatList', { userId, nickname })}
         >
           <Image
-            source={require('../assets/writing.png')}
+            source={require('../assets/messenger.png')}
             style={styles.navIcon}
           />
         </TouchableOpacity>
