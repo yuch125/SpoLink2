@@ -24,6 +24,9 @@ interface Props {
 
 export default function CommentSection({ postId }: Props) {
   const { profile } = useProfile(); // ✅ 현재 로그인된 사용자 정보
+  if (!profile) {
+    return null; // 혹은 <ActivityIndicator />
+  }
   console.log('🧪 profile:', profile);
   const { userId, nickname } = profile;
 

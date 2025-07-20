@@ -8,10 +8,25 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true },
     // 사용자 표시 이름
     nickname: { type: String },
-    // 프로필 이미지 URL
-    profileImage: { type: String },
     // 한 줄 소개
     bio: { type: String },
+    // 나이 그룹
+    ageGroup: {
+      type: String,
+      enum: ['중1', '중2', '중3', '고1', '고2', '고3', '대학생', '기타'],
+      default: '기타'
+    },
+
+    profileImage: {
+      type: String, // 업로드된 이미지의 URL
+      default: '',  // 없을 경우 기본 이미지
+    },
+
+    // 신뢰도 점수 (0~100)
+    trustScore: { type: Number, default: 0 },
+
+    // 닉네임 변경 가능 횟수 관리
+    nicknameChangeCount: { type: Number, default: 0 },
   },
   {
     timestamps: true,
@@ -22,7 +37,11 @@ const userSchema = new mongoose.Schema(
       transform: (_, ret) => {
         ret.userId = ret._id;
         delete ret._id;
-        delete ret.password; // 보안상 password는 응답에서 제거
+        delete ret.password;
+        ret.bio = ret.bio;
+        ret.ageGroup = ret.ageGroup;
+        ret.trustScore = ret.trustScore;
+        ret.remainingNicknameChanges = 3 - (ret.nicknameChangeCount || 0);// 보안상 password는 응답에서 제거
         return ret;
       },
     },

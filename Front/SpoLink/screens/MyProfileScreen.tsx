@@ -1,29 +1,30 @@
-// screens/MyProfileScreen.tsx
+// Front/SpoLink/screens/MyProfileScreen.tsx
+// 화면 맨 위에
+import * as ImagePicker from 'expo-image-picker';
+import { MediaType } from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
+import type { Profile } from '../contexts/ProfileContext';
 import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  Image,
   TextInput,
   TouchableOpacity,
+  Image,
   StyleSheet,
-  FlatList,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import axios from 'axios';
-import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
-import PostCard from '../components/PostCard';
-import { SERVER_URL } from '../constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { Post, RootStackParamList } from '../navigation/RootStackParamList';
+import { useNavigation, RouteProp, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../navigation/RootStackParamList';
+import { Picker } from '@react-native-picker/picker';
+import { SERVER_URL } from '../constants';
+import { useProfile } from '../contexts/ProfileContext';
 
-type Application = {
-  _id: string;
-  status: 'accepted' | 'pending';
-  post?: Post;
-};
-
+// 네비게이션 타입 정의
 type MyProfileRouteProp = RouteProp<RootStackParamList, 'MyProfile'>;
 type MyProfileNavProp = NativeStackNavigationProp<RootStackParamList, 'MyProfile'>;
 
@@ -31,180 +32,239 @@ export default function MyProfileScreen() {
   const route = useRoute<MyProfileRouteProp>();
   const navigation = useNavigation<MyProfileNavProp>();
   const { userId } = route.params;
-
+  const [profileImage, setProfileImage] = useState('');
+  const { profile, setProfile, clearProfile } = useProfile();
   const [nickname, setNickname] = useState('');
-  const [intro, setIntro] = useState('');
+  const [bio, setBio] = useState('');
+  const [ageGroup, setAgeGroup] = useState<'중1' | '중2' | '중3' | '고1' | '고2' | '고3' | '대학생' | '기타'>('기타');
+  const [trustScore, setTrustScore] = useState(0);
+  const [remainingChanges, setRemainingChanges] = useState(3);
   const [editing, setEditing] = useState(false);
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [applications, setApplications] = useState<Application[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // ✅ 모집 글 불러오기
-    axios.get(`${SERVER_URL}/posts`).then((res) => {
-      const myPosts = res.data.filter((p: Post) => {
-        const writerId = typeof p.writer === 'string' ? p.writer : p.writer?._id;
-        return writerId === userId;
-      });
-      setPosts(myPosts);
+
+  // ✅ 여기 위치에 작성하면 돼
+  const pickAndUploadImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      return Alert.alert('앨범 접근 권한이 필요합니다');
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
     });
+    
 
-    // ✅ 내가 신청한 글
-    axios.get(`${SERVER_URL}/applications`, { params: { userId } })
-      .then((res) => setApplications(res.data));
+    if (!result.canceled) {
+      const imageUri = result.assets[0].uri;
 
-    // ✅ 사용자 정보 불러오기
-    axios.get(`${SERVER_URL}/users/id/${userId}`).then((res) => {
-      setNickname(res.data.user.nickname || '');
-      setIntro(res.data.user.bio || '');
-    });
-  }, [userId]);
+      const filename = imageUri.split('/').pop() || 'profile.jpg';
+      const formData = new FormData();
+      formData.append('image', {
+        uri: imageUri,
+        name: filename,
+        type: 'image/jpeg',
+      } as any);
 
-  const handleSaveNickname = async () => {
-    console.log('🔄 닉네임 저장 시도');
-    console.log('📤 요청 URL:', `${SERVER_URL}/users/id/${userId}`);
-    console.log('📤 요청 데이터:', { newNickname: nickname, intro: intro });
+      try {
+        console.log('📤 이미지 업로드 시작');
 
-    try {
-      const response = await axios.patch(`${SERVER_URL}/users/id/${userId}`, {
-        newNickname: nickname,
-        intro: intro,
-      });
+        const uploadRes = await fetch(`${SERVER_URL}/upload/profile`, {
+          method: 'POST',
+          body: formData,
+        });
 
-      setNickname(response.data.user.nickname || '');
-      setIntro(response.data.user.bio || '');
+        console.log('📥 서버 응답 상태코드:', uploadRes.status);
 
-      Alert.alert('✅ 닉네임이 변경되었습니다');
-      setEditing(false);
-    } catch (err) {
-      console.error(err);
-      Alert.alert('❌ 닉네임 변경 실패');
+        const responseText = await uploadRes.text();
+        console.log('📦 서버 응답 본문:', responseText);
+      
+        const { imageUrl } = JSON.parse(responseText);   
+        console.log('✅ 이미지 URL:', imageUrl);
+
+        const token = await AsyncStorage.getItem('token');
+        await axios.patch(`${SERVER_URL}/users/${userId}`, {
+          profileImage: imageUrl,
+        }, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        setProfileImage(imageUrl);
+        if (profile) {
+          setProfile({ ...profile, profileImage: imageUrl });
+        }
+
+        Alert.alert('✅ 프로필 사진이 업데이트되었습니다');
+      } catch (err) {
+        console.error('이미지 업로드 실패:', err);
+        Alert.alert('❌ 이미지 업로드에 실패했습니다');
+      }
     }
   };
 
+  // 1) 화면 마운트 시 프로필 불러오기
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        const res = await axios.get(`${SERVER_URL}/users/${userId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const u = res.data.user as Profile;
+        console.log('👤 받아온 사용자 정보:', u); // 디버깅
+
+
+        setNickname(u.nickname);
+        setBio(u.bio);
+        setAgeGroup(u.ageGroup as typeof ageGroup);
+        setTrustScore(u.trustScore);
+        setRemainingChanges(u.remainingNicknameChanges);
+        setProfileImage(u.profileImage || '');
+        setProfile(u);
+
+        console.log('✅ 적용된 ageGroup:', ageGroup);
+        console.log('✅ 적용된 profileImage:', profileImage);
+
+      } catch (err) {
+        console.error('프로필 불러오기 실패:', err);
+        Alert.alert('❌ 프로필을 불러오는 데 실패했습니다');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [userId]);
+
+  // 2) 저장 버튼 핸들러
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+      const token = await AsyncStorage.getItem('token');
+      const res = await axios.patch(
+        `${SERVER_URL}/users/${userId}`,
+        { newNickname: nickname, bio, ageGroup },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const u = res.data.user as Profile;
+      setNickname(u.nickname);
+      setBio(u.bio);
+      setAgeGroup(u.ageGroup as typeof ageGroup);
+      setTrustScore(u.trustScore);
+      setRemainingChanges(u.remainingNicknameChanges);
+      setProfile(u);
+      setEditing(false);
+      Alert.alert('✅ 프로필이 업데이트되었습니다');
+      navigation.goBack();
+    } catch (err: any) {
+      console.error('프로필 업데이트 실패:', err);
+      Alert.alert(err.response?.data?.error || '❌ 업데이트에 실패했습니다');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 3) 로그아웃
   const handleLogout = async () => {
     await AsyncStorage.clear();
+    clearProfile();
     navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
   };
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <Image source={require('../assets/user.png')} style={styles.profileImage} />
 
+      <View style={{ alignItems: 'center', marginBottom: 16 }}>
+        <TouchableOpacity onPress={() => {
+          console.log('사진 누름');
+          if (editing) {
+            pickAndUploadImage();
+          }
+        }}>          
+        <Image
+            source={profileImage ? { uri: profileImage } : require('../assets/user.png')}
+            style={styles.avatar}
+          />
+        </TouchableOpacity>
+          <Text style={styles.changeText}>사진을 눌러주세요</Text>
+        
+      </View>
       {editing ? (
         <View style={styles.editBlock}>
+          <Text>닉네임 ({remainingChanges}회 변경 가능)</Text>
           <TextInput
-            style={styles.nicknameInput}
+            style={styles.input}
             value={nickname}
             onChangeText={setNickname}
             placeholder="닉네임"
           />
+
+          <Text>한줄소개</Text>
           <TextInput
-            style={styles.nicknameInput}
-            value={intro}
-            onChangeText={setIntro}
+            style={styles.input}
+            value={bio}
+            onChangeText={setBio}
             placeholder="한줄 소개"
           />
-          <TouchableOpacity onPress={handleSaveNickname}>
+
+          <Text>나이</Text>
+          <Picker
+            selectedValue={ageGroup}
+            onValueChange={setAgeGroup}
+            style={styles.picker}
+          >
+            {['중1', '중2', '중3', '고1', '고2', '고3', '대학생', '기타'].map(a => (
+              <Picker.Item key={a} label={a} value={a} />
+            ))}
+          </Picker>
+
+          <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
             <Text style={styles.saveText}>저장</Text>
           </TouchableOpacity>
         </View>
       ) : (
-        <View style={styles.nicknameRow}>
-          <View>
-            <Text style={styles.nickname}>{nickname}</Text>
-            <Text style={styles.intro}>{intro}</Text>
-          </View>
-          <TouchableOpacity
-            onPress={() => {
-              console.log('✏️ 수정 버튼 클릭됨');
-              setEditing(true);
-            }}
-          >
-            <Text style={styles.editText}>수정</Text>
+        <View style={styles.infoBlock}>
+          <Text style={styles.nickname}>{nickname}</Text>
+          <Text style={styles.intro}>{bio}</Text>
+          <Text style={styles.trust}>신뢰도: {trustScore}%</Text>
+          <Text style={styles.intro}>나이: {ageGroup}</Text>
+          <TouchableOpacity onPress={() => setEditing(true)}>
+            <Text style={styles.editText}>✏️ 프로필, 프사 수정</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-        <Text style={{ color: 'white' }}>로그아웃</Text>
+      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+        <Text style={styles.logoutText}>로그아웃</Text>
       </TouchableOpacity>
-
-      <Text style={styles.sectionTitle}>📍 내가 만든 모집</Text>
-      <FlatList
-        data={posts}
-        keyExtractor={(item) => item._id}
-        renderItem={({ item }) => (
-          <PostCard
-            post={item}
-            currentUser={userId}
-            onEdit={() => {}}
-            onDelete={() => {}}
-          />
-        )}
-      />
-
-      <Text style={styles.sectionTitle}>✏️ 참가 신청한 모집</Text>
-      <FlatList
-        data={applications}
-        keyExtractor={(item) => item._id || Math.random().toString()}
-        renderItem={({ item }) =>
-          item.post ? (
-            <PostCard
-              post={item.post}
-              currentUser={userId}
-              onEdit={() => {}}
-              onDelete={() => {}}
-            />
-          ) : (
-            <Text></Text>
-          )
-        }
-      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    alignSelf: 'center',
-    marginBottom: 10,
-  },
-  nicknameRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  nickname: { fontSize: 20, fontWeight: 'bold' },
-  intro: { color: '#666', marginTop: 4 },
-  editText: { color: 'blue', marginLeft: 10 },
-  subtext: { textAlign: 'center', color: '#888', marginBottom: 20 },
-  editBlock: {
-    marginBottom: 12,
-    gap: 8,
-  },
-  nicknameInput: {
-    borderBottomWidth: 1,
-    fontSize: 18,
-    paddingVertical: 6,
-    marginBottom: 8,
-  },
-  saveText: { color: 'green', fontWeight: 'bold' },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  logoutButton: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#333',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-  },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  container: { flex: 1, padding: 16, alignItems: 'center', backgroundColor: '#fff' },
+  avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: 16 },
+  infoBlock: { alignItems: 'center', marginBottom: 24 },
+  nickname: { fontSize: 24, fontWeight: 'bold' },
+  intro: { fontSize: 16, color: '#555', marginVertical: 8, textAlign: 'center' },
+  trust: { fontSize: 14, color: '#888' },
+  editText: { fontSize: 14, color: '#007AFF', marginTop: 8 },
+  editBlock: { width: '100%', paddingHorizontal: 24 },
+  input: { borderBottomWidth: 1, borderColor: '#ccc', fontSize: 18, marginBottom: 16, paddingVertical: 4 },
+  picker: { width: '100%', marginBottom: 16 },
+  saveBtn: { backgroundColor: '#007AFF', padding: 12, borderRadius: 8, alignItems: 'center' },
+  saveText: { color: '#fff', fontSize: 16 },
+  logoutBtn: { marginTop: 'auto', backgroundColor: '#333', paddingVertical: 10, paddingHorizontal: 24, borderRadius: 8 },
+  logoutText: { color: '#fff', fontSize: 16 },
+  changeText: { fontSize: 14, color: '#888', marginBottom: 16, marginTop: 4, }
 });

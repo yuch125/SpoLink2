@@ -1,24 +1,52 @@
-// contexts/ProfileContext.tsx
 import React, { createContext, useContext, useState } from 'react';
 
 type Profile = {
   userId: string;
   nickname: string;
+  bio: string;
+  ageGroup: string;
+  trustScore: number;
+  remainingNicknameChanges: number;
 };
 
 type ProfileContextType = {
-  profile: Profile;
-  
-  setProfile: (profile: Profile) => void;
+  profile: Profile | null;
+  setProfile: (update: Partial<Profile>) => void;
+  clearProfile: () => void;
 };
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
 export const ProfileProvider = ({ children }: { children: React.ReactNode }) => {
-  console.log('✅ ProfileProvider 렌더됨');
-  const [profile, setProfile] = useState<Profile>({ userId: '', nickname: '' });
+  const [profile, setProfileState] = useState<Profile | null>(null);
+
+  const setProfile = (update: Partial<Profile>) => {
+    setProfileState(prev => {
+      // 초기 상태라면 강제로 타입캐스팅하거나 기본값 적용 필요
+      if (!prev) {
+        return {
+          userId: update.userId ?? '',
+          nickname: update.nickname ?? '',
+          bio: update.bio ?? '',
+          ageGroup: update.ageGroup ?? '기타',
+          trustScore: update.trustScore ?? 0,
+          remainingNicknameChanges: update.remainingNicknameChanges ?? 3,
+        };
+      }
+
+      return {
+        ...prev,
+        ...update,
+      };
+    });
+  };
+
+  const clearProfile = () => {
+    setProfileState(null);
+  };
+
   return (
-    <ProfileContext.Provider value={{ profile, setProfile }}>
+    <ProfileContext.Provider value={{ profile, setProfile, clearProfile }}>
       {children}
     </ProfileContext.Provider>
   );

@@ -15,7 +15,7 @@ router.post('/', async (req, res) => {
 
     const { category, content, time, location, detail, writer, maxParticipants } = req.body;
 
-    if (!writer || !writer.userId || !writer.nickname) {
+    if (!writer) {
       return res.status(400).json({ error: '작성자 정보가 필요합니다.' });
     }
 
@@ -25,7 +25,7 @@ router.post('/', async (req, res) => {
       time,
       location,
       detail,
-      writer,
+      writer: new mongoose.Types.ObjectId(writer), // ✅ 여기!
       participants: 0,
       maxParticipants: maxParticipants || 12,
       expiresAt,
@@ -44,7 +44,9 @@ router.post('/', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const now = new Date();
-    const posts = await Post.find().populate('writer', 'nickname');
+    const posts = await Post.find().populate('writer', 'nickname profileImage');
+    console.log('🧾 응답 posts:', JSON.stringify(posts, null, 2));
+
     res.json(posts);
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

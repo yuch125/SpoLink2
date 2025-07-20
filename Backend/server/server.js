@@ -32,14 +32,11 @@ io.on('connection', (socket) => {
     console.log(`👥 ${userId}가 방(${roomId})에 입장함`);
   });
 
-  socket.on('sendMessage', async ({ roomId, userId, nickname, content }) => {
-    const message = new Message({
-      roomId,
-      sender: { userId, nickname },
-      content,
-    });
-    await message.save();
-    io.to(roomId).emit('newMessage', message);
+  socket.on('sendMessage', async ({ roomId, senderId, nickname, content }) => {
+      const message = await Message.create({ roomId, sender: senderId, content });
+      // 저장 직후, User 컬렉션에서 nickname을 붙여서 내보낸다
+      const populated = await message.populate('sender', 'nickname');
+      io.to(roomId).emit('newMessage', populated);
   });
 
   socket.on('disconnect', () => {
@@ -71,16 +68,24 @@ const commentRoutes = require('../routes/comments');
 const postsRouter = require('../routes/posts');
 const messageRoutes = require('../routes/messages');
 const chatRoomRoutes = require('../routes/chatrooms');
+const uploadRoutes = require('../routes/upload');
 // ─────────────────────────────────────────────
 // 🔗 3. 라우터 등록
 // ─────────────────────────────────────────────
+// server.js 상단, 다른 app.use 보다 위에
+app.use((req, res, next) => {
+  console.log(`📥 Incoming → [${req.method}] ${req.url}`);
+  next();
+});
+
 app.use('/applications', applicationRoutes);
 app.use('/users', usersRouter);
 app.use('/comments', commentRoutes);
 app.use('/posts', postsRouter);
 app.use('/messages', messageRoutes)
 app.use('/chatrooms', chatRoomRoutes);
-
+app.use('/uploads', express.static('uploads'));
+app.use('/upload', require('../routes/upload'));
 // ─────────────────────────────────────────────
 // 🔧 4. 유틸성 API
 // ─────────────────────────────────────────────

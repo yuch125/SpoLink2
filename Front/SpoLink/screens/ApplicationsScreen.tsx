@@ -8,7 +8,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import io from 'socket.io-client';
+ import { io, Socket } from 'socket.io-client';
 import axios from 'axios';
 import {
   useRoute,
@@ -42,8 +42,8 @@ export default function ApplicationsScreen() {
   const navigation = useNavigation<ApplicationsNavProp>();
   const { postId } = route.params;
   const { profile } = useProfile();
+  if (!profile) return <ActivityIndicator style={{flex:1}} size="large" />;
   const { userId, nickname } = profile;
-
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 

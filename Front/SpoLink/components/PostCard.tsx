@@ -8,6 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/RootStackParamList';
 import { useProfile } from '../contexts/ProfileContext'; // ✅ 추가
+import { Image } from 'react-native';
 
 type Props = {
   post: Post;
@@ -19,8 +20,12 @@ type Props = {
 export default function PostCard({ post, currentUser, onDelete, onEdit }: Props) {
   const [showComments, setShowComments] = useState(false);
   const { profile } = useProfile();
-  const nickname = profile.nickname;
-  
+  const nickname = profile?.nickname || '익명';
+
+  const goToProfile = () => {
+    navigation.navigate('Profile', { userId: writerId }); // ✅ post.writerId는 작성자 userId
+  };
+
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const writerId =
     typeof post.writer === 'string'
@@ -32,17 +37,19 @@ export default function PostCard({ post, currentUser, onDelete, onEdit }: Props)
       ? post.writer.nickname
       : '익명';
 
+  console.log('🖼 작성자 profileImage:', post.writer?.profileImage);
+
   const isOwner = currentUser === writerId;
 
   const handleApply = async () => {
     console.log('🟢 참가신청 버튼 클릭됨', post._id, currentUser);
-    console.log('✅ 신청에 들어갈 닉네임:', profile.nickname); // 🔍 여기!
+    console.log('✅ 신청에 들어갈 닉네임:', profile?.nickname || '익명'); // 🔍 여기!
 
     try {
       await axios.post(`${SERVER_URL}/applications`, {
         postId: post._id,
         userId: currentUser,
-        nickname: profile.nickname,
+        nickname: profile?.nickname || '익명',
       });
       Alert.alert('✅ 참가 신청 완료', '주최자가 수락할 때까지 기다려주세요.');
     } catch (err: any) {
@@ -58,7 +65,21 @@ export default function PostCard({ post, currentUser, onDelete, onEdit }: Props)
   return (
     <View style={styles.card}>
       <Text style={styles.category}>🏷️ {post.category}</Text>
-      <Text style={styles.writer}>작성자: {writerNickname}</Text>
+      <View style={styles.writerRow}>
+        <TouchableOpacity onPress={goToProfile} style={styles.writerProfile}>
+          <Image
+            source={
+              typeof post.writer === 'object' &&
+                post.writer?.profileImage &&
+                post.writer.profileImage.trim() !== ''
+                ? { uri: post.writer.profileImage }
+                : require('../assets/user.png')
+            }
+            style={styles.profileImage}
+          />
+          <Text style={styles.writer}>{writerNickname}</Text>
+        </TouchableOpacity>
+      </View>
       <Text style={styles.content}>{post.content}</Text>
       <Text style={styles.label}>장소: {post.location}</Text>
       <Text style={styles.label}>시간: {post.time}</Text>
@@ -179,4 +200,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   manageText: { color: '#007AFF', fontWeight: 'bold' },
+  writerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+
+  writerProfile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  profileImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 8,
+    backgroundColor: '#eee',
+  },
+
 });

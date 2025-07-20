@@ -30,7 +30,7 @@ router.get('/post/:postId', async (req, res) => {
 router.get('/:roomId', async (req, res) => {
   try {
     const roomObjectId = new mongoose.Types.ObjectId(req.params.roomId); // 이 줄 추가!
-    const messages = await Message.find({ roomId: roomObjectId }).sort('createdAt');
+    const messages = await Message.find({ roomId: roomObjectId }).sort({createdAt : 1}).populate('sender', 'nickname');
     res.json(messages);
   } catch (err) {
     console.error('❌ 메시지 조회 오류:', err); // 디버깅용 로그

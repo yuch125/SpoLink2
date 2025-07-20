@@ -15,16 +15,21 @@ import axios from 'axios';
 import { RouteProp } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SERVER_URL } from '../constants';
+import { useProfile } from '../contexts/ProfileContext';
 
 type CreatePostRouteProp = RouteProp<RootStackParamList, 'CreatePost'>;
 type CreatePostNavProp = NativeStackNavigationProp<RootStackParamList, 'CreatePost'>;
 
 export default function CreatePostScreen() {
+  const { profile } = useProfile();
+
   const navigation = useNavigation<CreatePostNavProp>();
   const route = useRoute<CreatePostRouteProp>();
 
   const userId = route.params?.userId;
-  const nickname = route.params?.nickname;  // 이 줄 추가!
+  const nickname = route.params?.nickname;
+  const profileImage = profile?.profileImage || '';
+  console.log('🧑‍💻 현재 프로필 이미지:', profile?.profileImage);
 
   if (!userId) {
     console.error('❌ CreatePostScreen: userId가 전달되지 않았습니다!');
@@ -84,10 +89,7 @@ export default function CreatePostScreen() {
       time,
       location,
       detail,
-      writer: {
-        userId,
-        nickname,
-      },
+      writer: userId,
       maxParticipants,
       participants: 1,
       expiresAt,

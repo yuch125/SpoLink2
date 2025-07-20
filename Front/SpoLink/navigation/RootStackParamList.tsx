@@ -42,9 +42,7 @@ export type RootStackParamList = {
   };
   Applications: { userId?: string, postId?: string, nickname?: string, };
   MyApplicationList: { userId: string };
-  MyProfile: {
-    userId: string;
-  };
+  MyProfile : {userId:string};
   Profile: {userId: string}
   PlaceSearch: {
     from?: 'CreatePost' | 'EditPost';

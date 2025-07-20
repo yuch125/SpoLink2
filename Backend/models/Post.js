@@ -3,7 +3,9 @@ module.exports = (mongoose) => {
     return mongoose.model('Post');
   }
 
-  const postSchema = new mongoose.Schema(
+  const { Schema } = mongoose;
+
+  const postSchema = new Schema(
     {
       category: String,
       content: String,
@@ -12,10 +14,9 @@ module.exports = (mongoose) => {
       detail: String,
 
       // 🔄 리팩토링된 작성자 필드
-      writer: {
-        userId: { type: String, required: true },     // 실제 아이디
-        nickname: { type: String, required: true },   // 화면용 닉네임
-      },
+      writer: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+      content: String,
+
 
       // 🔄 리팩토링된 신청자 배열
       applicants: [

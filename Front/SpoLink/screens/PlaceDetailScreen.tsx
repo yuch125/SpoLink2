@@ -160,36 +160,7 @@ export default function PlaceDetailScreen() {
             </Text>
           </>
         )}
-
-        {/* 직접 계산한 거리 (예시) */}
-        {!loadingUserLoc && userLocation && (
-          <>
-            <Text style={styles.label}>내 위치와의 직접 계산 거리:</Text>
-            <Text style={styles.text}>
-              {(() => {
-                // 단순히 Pythagoras 근사: 위도/경도 차이를 이용해 m 단위로 근사 계산
-                const toRad = (deg: number) => (deg * Math.PI) / 180;
-                const R = 6371000; // 지구 반지름 (m)
-                const φ1 = toRad(userLocation.latitude);
-                const φ2 = toRad(latitude);
-                const Δφ = toRad(latitude - userLocation.latitude);
-                const Δλ = toRad(longitude - userLocation.longitude);
-                const a =
-                  Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-                  Math.cos(φ1) *
-                  Math.cos(φ2) *
-                  Math.sin(Δλ / 2) *
-                  Math.sin(Δλ / 2);
-                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                const d = R * c; // 미터 단위
-                return d < 1000
-                  ? `${Math.round(d)} m`
-                  : `${(d / 1000).toFixed(1)} km`;
-              })()}
-            </Text>
-          </>
-        )}
-
+        
         {/* 구글맵 보기 버튼 */}
       </View>
     </ScrollView>
