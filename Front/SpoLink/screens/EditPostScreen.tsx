@@ -25,19 +25,53 @@ export default function EditPostScreen() {
   const [category, setCategory] = useState(post.category);
   const [content, setContent] = useState(post.content);
   const [time, setTime] = useState(post.time);
-  const [location, setLocation] = useState(post.location);
+  const [location, setLocation] = useState<{
+    name: string;
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [locationName, setLocationName] = useState<string>(''); // ✅ 이 줄 추가
+
   const [detail, setDetail] = useState(post.detail);
 
   // 🔄 장소 검색 후 돌아왔을 때 선택된 장소 반영
   useEffect(() => {
-    if (route.params?.selectedPlace) {
-      setLocation(route.params.selectedPlace);
+    if (post.location) {
+      setLocation({
+        name: post.locationName, // ✅ name 필드 추가
+        latitude: post.location.coordinates[1],
+        longitude: post.location.coordinates[0],
+      });
     }
-  }, [route.params?.selectedPlace]);
+    if (post.locationName) {
+      setLocationName(post.locationName);  // ✅ 이 줄 추가
+    }
+  }, [post]);
 
+  // 🔽 2. 이 위치에 너가 말한 useEffect 붙여줘
+  useEffect(() => {
+    const focusUnsubscribe = navigation.addListener('focus', () => {
+      if (route.params?.selectedPlace) {
+        const selected = route.params.selectedPlace;
+        setLocation({
+          name: selected.name,
+          latitude: selected.latitude,
+          longitude: selected.longitude,
+        });
+        setLocationName(selected.name); // ✅ locationName도 함께 갱신!
+      }
+    });
+
+    return focusUnsubscribe;
+  }, [navigation, route.params?.selectedPlace]);
   const handleSave = async () => {
     try {
-      const updated = { category, content, time, location, detail };
+      const updated = {
+        category, content, time, location: location ? {
+          type: 'Point',
+          coordinates: [location.longitude, location.latitude], // 👈 이 구조로!
+        } : null, detail, locationName
+      };
       await axios.put(`${SERVER_URL}/posts/${post._id}`, updated, {
         headers: { 'Content-Type': 'application/json' },
       });
@@ -45,10 +79,13 @@ export default function EditPostScreen() {
         {
           text: '확인',
           onPress: () => {
-            navigation.navigate('Home', { userId, nickname });
+            setTimeout(() => {
+              navigation.navigate('Home', { userId, nickname });
+            }, 1000); // 1초 정도 딜레이
           },
         },
       ]);
+      
     } catch (err) {
       console.error('❌ 수정 실패:', err);
       Alert.alert('수정 중 오류 발생');
@@ -60,7 +97,7 @@ export default function EditPostScreen() {
       <Text style={styles.title}>모임 카드 수정</Text>
 
       <View style={styles.sportButtonContainer}>
-        {['농구', '축구', '야구', '배구'].map((sport) => (
+        {['농구', '축구', '배드민턴', '런닝'].map((sport) => (
           <TouchableOpacity
             key={sport}
             style={[
@@ -103,9 +140,8 @@ export default function EditPostScreen() {
           });
         }}
       >
-        <Text style={{ color: location ? '#000' : '#888' }}>
-          {location ? location : '장소를 선택하세요'}
-        </Text>
+        <Text>{location?.name ?? '장소를 선택하세요'}</Text>
+
       </TouchableOpacity>
 
       <TextInput

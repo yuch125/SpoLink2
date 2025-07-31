@@ -7,14 +7,22 @@ const messageSchema = new mongoose.Schema({
     required: true,
   },
   sender: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
+  content: {
+    type: String,
+    required: true,
+  },
+  readBy: [
+    {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
-  },
-  content: String,
+    }
+  ],  // 여기에 읽음 표시할 유저 아이디들을 저장
 }, {
-  timestamps: true,
+  timestamps: true, // createdAt, updatedAt 자동 생성
 });
 
-// 반드시 이렇게 모듈 전체를 export 해야 합니다:
 module.exports = mongoose.model('Message', messageSchema);

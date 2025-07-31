@@ -25,11 +25,10 @@ export default function CreatePostScreen() {
 
   const navigation = useNavigation<CreatePostNavProp>();
   const route = useRoute<CreatePostRouteProp>();
-
+  const selectedPlace = route.params?.selectedPlace;
   const userId = route.params?.userId;
   const nickname = route.params?.nickname;
   const profileImage = profile?.profileImage || '';
-  console.log('🧑‍💻 현재 프로필 이미지:', profile?.profileImage);
 
   if (!userId) {
     console.error('❌ CreatePostScreen: userId가 전달되지 않았습니다!');
@@ -40,22 +39,29 @@ export default function CreatePostScreen() {
 
   const [category, setCategory] = useState('');
   const [content, setContent] = useState('');
-  const [location, setLocation] = useState('');
+  const [locationName, setLocationName] = useState<string>('');                // 화면에 보여줄 텍스트
+  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);  // DB에 보낼 위·경도
   const [detail, setDetail] = useState('');
   const [expiresAt, setExpiresAt] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [maxParticipants, setMaxParticipants] = useState(12);
-
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [endTime, setEndTime] = useState<Date | null>(null);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [isSelectingStartTime, setIsSelectingStartTime] = useState(true);
 
   useEffect(() => {
-    if (route.params?.selectedPlace) {
-      setLocation(route.params.selectedPlace);
+    
+    if (selectedPlace) {
+      console.log('🧭 선택된 장소:', selectedPlace);
+      const { name, latitude, longitude } = route.params.selectedPlace;
+      console.log('🗺️ 장소 이름:', name);
+      setLocationName(name);                          // UI 텍스트용
+      setCoordinates({ lat: latitude, lng: longitude });  // GeoJSON용
     }
   }, [route.params?.selectedPlace]);
+
+
 
   const onChangeDate = (event: any, selectedDate?: Date) => {
     setShowDatePicker(Platform.OS === 'ios');
@@ -65,7 +71,7 @@ export default function CreatePostScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!category || !content || !startTime || !endTime || !location || !detail) {
+    if (!category || !content || !startTime || !endTime || !coordinates || !detail) {
       Alert.alert('모든 항목을 입력해 주세요.');
       return;
     }
@@ -87,12 +93,18 @@ export default function CreatePostScreen() {
       category,
       content,
       time,
-      location,
-      detail,
       writer: userId,
       maxParticipants,
       participants: 1,
       expiresAt,
+      locationName,  
+      location: {
+        type: 'Point',
+        coordinates: coordinates
+          ? [coordinates.lng, coordinates.lat]
+          : [0, 0],  // 좌표가 없으면 기본값 (필요시 처리)
+      },
+      detail,
     };
     console.log('🧾 생성 요청 데이터:', newPost);
     try {
@@ -123,7 +135,7 @@ export default function CreatePostScreen() {
 
       <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8 }}>운동 종목 선택</Text>
       <View style={styles.sportButtonContainer}>
-        {['농구', '축구', '야구', '배구'].map((sport) => (
+        {['농구', '축구', '배드민턴', '런닝'].map((sport) => (
           <TouchableOpacity
             key={sport}
             style={[styles.sportButton, category === sport && styles.sportButtonSelected]}
@@ -175,16 +187,17 @@ export default function CreatePostScreen() {
       <TouchableOpacity
         style={[styles.input, styles.locationBox]}
         onPress={() => {
+          console.log('📍 장소 선택 이동 시도:', userId, nickname);
           navigation.navigate('PlaceSearch', {
             from: 'CreatePost',
             userId,
-            nickname,
+            nickname: nickname!,
             prevData: { category, content, detail },
           });
         }}
       >
-        <Text style={{ color: location ? '#000' : '#888' }}>
-          {location ? location : '장소를 선택하세요'}
+        <Text style={{ color: locationName ? '#000' : '#888' }}>
+          {locationName || '장소를 선택하세요'}
         </Text>
       </TouchableOpacity>
 

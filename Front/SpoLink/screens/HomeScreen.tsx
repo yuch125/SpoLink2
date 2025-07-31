@@ -1,5 +1,9 @@
 // screens/HomeScreen.tsx
-
+import {
+  getCurrentPositionAsync,
+  requestForegroundPermissionsAsync,
+  LocationObject,
+} from 'expo-location';
 import React, { useEffect, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
@@ -29,28 +33,89 @@ import PostCard from '../components/PostCard';
 import { FlatList } from 'react-native';
 import { SERVER_URL } from '../constants';
 import { useProfile } from '../contexts/ProfileContext';
-
+import { haversineDistance } from '../utils/distance';
 const categoryIcons: Record<string, any> = {
   농구: require('../assets/basketball.png'),
   축구: require('../assets/soccer-ball-variant.png'),
-  야구: require('../assets/baseball-ball.png'),
-  배구: require('../assets/volleyball-ball.png'),
+  배드민턴: require('../assets/baseball-ball.png'),
+  런닝: require('../assets/volleyball-ball.png'),
 };
 
 type HomeNavProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
 
 export default function HomeScreen() {
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
 
-  const { profile } = useProfile();
+  const { profile } = useProfile(); // ✅ 현재 로그인된 사용자 정보
+  if (!profile) {
+    return null; // 혹은 <ActivityIndicator />
+  }
   const { userId, nickname } = profile; // 👈 여기서 가져오면 됨
   const navigation = useNavigation<HomeNavProp>();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const fetchPosts = async () => {
+    try {
+      const res = await axios.get<Post[]>(`${SERVER_URL}/posts`);
+      const withDist = res.data
+        .filter(post => post.location && post.location.coordinates)
+        .map(post => ({
+          ...post,
+          distance: userCoords
+            ? haversineDistance(
+                userCoords.lat,
+                userCoords.lng,
+                post.location.coordinates[1],
+                post.location.coordinates[0]
+              )
+            : 0,
+        }))
+        .sort((a, b) => a.distance - b.distance);
+      setPosts(withDist);
+    } catch (err) {
+      console.error('❌ 게시물 불러오기 실패:', err);
+      Alert.alert('오류', '게시물 불러오기에 실패했습니다.');
+    }
+  };
   const filteredPosts = selectedCategory
     ? posts.filter(post => post.category === selectedCategory)
     : posts;
   console.log('📦 userId:', userId, 'nickname:', nickname);
+
+  useEffect(() => {
+    (async () => {
+      const { status } = await requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('위치 권한 필요', '위치 권한이 거부되었습니다.');
+        return;
+      }
+
+      const loc = await getCurrentPositionAsync({});
+      setUserCoords({
+        lat: loc.coords.latitude,
+        lng: loc.coords.longitude,
+      });
+    })();
+  }, []);
+
+
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🏠 HomeScreen 포커스 → 모집글 새로고침');
+      fetchPosts();
+    }, [userCoords])
+  );
+  
+
+
+
+
   useEffect(() => {
     console.log(userId, nickname)
     if (!userId || !nickname) {
@@ -67,15 +132,34 @@ export default function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      axios
-        .get(`${SERVER_URL}/posts`)
-        .then(res => setPosts(res.data))
-        .catch(err => {
+      if (!userCoords) return;  // 위치 없으면 대기
+
+      (async () => {
+        try {
+          const res = await axios.get<Post[]>(`${SERVER_URL}/posts`);
+          const withDist = res.data
+            .filter(post => post.location && post.location.coordinates)
+            .map(post => ({
+              ...post,
+              distance: haversineDistance(
+                userCoords.lat,
+                userCoords.lng,
+                post.location.coordinates[1],
+                post.location.coordinates[0]
+              ),
+            }))
+            .sort((a, b) => a.distance - b.distance);
+
+
+          setPosts(withDist);
+        } catch (err) {
           console.error('❌ 카드 불러오기 실패:', err);
           Alert.alert('오류', '카드 목록을 불러오는데 실패했습니다.');
-        });
-    }, [])
+        }
+      })();
+    }, [userCoords])
   );
+
 
   const handleDelete = async (postId: string) => {
     try {
@@ -89,6 +173,7 @@ export default function HomeScreen() {
   const handleEdit = (post: Post) => {
     navigation.navigate('EditPost', { post, userId, nickname, });
   };
+
 
   return (
     <View style={styles.container}>
@@ -112,7 +197,7 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.categoryContainer}>
-        {['농구', '축구', '야구', '배구'].map(sport => (
+        {['농구', '축구', '배드민턴', '런닝'].map(sport => (
           <TouchableOpacity
             key={sport}
             style={[
@@ -160,16 +245,6 @@ export default function HomeScreen() {
 
 
       <View style={styles.navbar}>
-        <TouchableOpacity
-          onPress={() =>
-            navigation.navigate('PlaceSearch', { userId, nickname })
-          }
-        >
-          <Image
-            source={require('../assets/placeholder.png')}
-            style={styles.navIcon}
-          />
-        </TouchableOpacity>
         <TouchableOpacity
           onPress={() =>
             navigation.navigate('Home', { userId, nickname })

@@ -132,7 +132,7 @@ export default function LoginScreen() {
   if (showSignup) {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>회원가입</Text>
+        <Text style={styles.logo}>회원가입</Text>
         <TextInput
           style={styles.input}
           placeholder="아이디"

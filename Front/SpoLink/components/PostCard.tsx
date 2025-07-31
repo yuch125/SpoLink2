@@ -22,20 +22,25 @@ export default function PostCard({ post, currentUser, onDelete, onEdit }: Props)
   const { profile } = useProfile();
   const nickname = profile?.nickname || '익명';
 
-  const goToProfile = () => {
-    navigation.navigate('Profile', { userId: writerId }); // ✅ post.writerId는 작성자 userId
-  };
 
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const writerId =
     typeof post.writer === 'string'
       ? post.writer
-      : post.writer?.userId || '';
+      : post.writer?._id || '';
 
-  const writerNickname =
-    typeof post.writer === 'object' && post.writer?.nickname
+      const writerNickname =
+      typeof post.writer === 'object' && post.writer?.nickname
       ? post.writer.nickname
       : '익명';
+      console.log('📍 post.locationName =', post.locationName);
+      const goToProfile = () => {
+        if (writerId) {
+          navigation.navigate('Profile', { userId: writerId });
+        } else {
+          Alert.alert('⚠️ 사용자 정보 없음', '작성자 정보를 찾을 수 없습니다.');
+        }
+      };
 
   console.log('🖼 작성자 profileImage:', post.writer?.profileImage);
 
@@ -80,8 +85,7 @@ export default function PostCard({ post, currentUser, onDelete, onEdit }: Props)
           <Text style={styles.writer}>{writerNickname}</Text>
         </TouchableOpacity>
       </View>
-      <Text style={styles.content}>{post.content}</Text>
-      <Text style={styles.label}>장소: {post.location}</Text>
+       <Text style={styles.label}>장소: {post.locationName}</Text>
       <Text style={styles.label}>시간: {post.time}</Text>
       <Text style={styles.label}>설명: {post.detail}</Text>
       <Text style={styles.participants}>

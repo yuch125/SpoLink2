@@ -1,12 +1,14 @@
 import React, { createContext, useContext, useState } from 'react';
 
-type Profile = {
+export type Profile = {
   userId: string;
   nickname: string;
   bio: string;
   ageGroup: string;
   trustScore: number;
   remainingNicknameChanges: number;
+  profileImage?: string; // ← 이게 있어야 돼!
+
 };
 
 type ProfileContextType = {
@@ -30,6 +32,7 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
           bio: update.bio ?? '',
           ageGroup: update.ageGroup ?? '기타',
           trustScore: update.trustScore ?? 0,
+          profileImage: update.profileImage ?? '', // ✅ 이거 추가!
           remainingNicknameChanges: update.remainingNicknameChanges ?? 3,
         };
       }

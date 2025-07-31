@@ -32,7 +32,11 @@ export type RootStackParamList = {
   CreatePost: {
     userId: string;
     nickname?: string;
-    selectedPlace?: string;
+    selectedPlace?: {
+      name: string;
+      latitude: number;
+      longitude: number;
+    };
     prevData?: {
       category?: string;
       content?: string;
@@ -42,10 +46,10 @@ export type RootStackParamList = {
   };
   Applications: { userId?: string, postId?: string, nickname?: string, };
   MyApplicationList: { userId: string };
-  MyProfile : {userId:string};
-  Profile: {userId: string}
+  MyProfile: { userId: string };
+  Profile: { userId: string }
   PlaceSearch: {
-    from?: 'CreatePost' | 'EditPost';
+    from: 'CreatePost' | 'EditPost';
     prevData?: {
       category?: string;
       content?: string;
@@ -53,10 +57,19 @@ export type RootStackParamList = {
       detail?: string;
     };
     post?: Post;
-    userId?: string;
-    nickname?: string;
+    userId: string;
+    nickname: string;
   };
-  EditPost: { post: Post; userId: string; nickname: string; selectedPlace?: string };
+  EditPost: {
+    post: Post;
+    userId: string;
+    nickname: string;
+    selectedPlace?: {
+      name: string;
+      latitude: number;
+      longitude: number;
+    };
+  };
   Chat: undefined;
   PlaceDetail: { place: KakaoPlace };
   NicknameSetup: { userId: string; token: string; loginId: string; };
@@ -75,14 +88,14 @@ export type Post = {
   category: string;
   content: string;
   time: string;
-  location: string;
-  detail: string;
+  location: { coordinates: [number, number] }; detail: string;
   writer: {
     _id: string;
     nickname: string;
     userId?: string;
     profileImage?: string;
   };
+  locationName :  string;
   participants: number;
   maxParticipants: number;
   expiresAt: string;

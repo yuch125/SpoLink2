@@ -32,12 +32,56 @@ io.on('connection', (socket) => {
     console.log(`👥 ${userId}가 방(${roomId})에 입장함`);
   });
 
-  socket.on('sendMessage', async ({ roomId, senderId, nickname, content }) => {
-      const message = await Message.create({ roomId, sender: senderId, content });
-      // 저장 직후, User 컬렉션에서 nickname을 붙여서 내보낸다
-      const populated = await message.populate('sender', 'nickname');
-      io.to(roomId).emit('newMessage', populated);
+  socket.on('sendMessage', async ({ roomId, senderId, content }) => {
+    try {
+      // create()가 이미 저장까지 해 줌
+      const saved = await Message.create({ roomId, sender: senderId, content });
+      const populated = await saved.populate('sender', 'nickname profileImage');
+      io.to(roomId.toString()).emit('newMessage', populated);
+    } catch (err) {
+      console.error('❌ sendMessage 처리 중 오류:', err);
+    }
   });
+
+    // — 읽음 표시
+ socket.on('readMessage', async ({ roomId, messageId, userId }) => {
+    try {
+      await Message.findByIdAndUpdate(messageId, {
+        $addToSet: { readBy: userId }
+      });
+      io.to(roomId.toString()).emit('messageRead', { messageId, readerId: userId });
+    } catch (err) {
+      console.error('❌ readMessage 처리 중 오류:', err);
+    }
+  });
+
+  // — 메시지 수정
+  socket.on('editMessage', async ({ roomId, messageId, userId, content }) => {
+    try {
+      const msg = await Message.findById(messageId);
+      if (!msg || msg.sender.toString() !== userId) return;
+      msg.content   = content;
+      msg.updatedAt = new Date();
+      await msg.save();
+      const populated = await msg.populate('sender', 'nickname profileImage');
+      io.to(roomId.toString()).emit('messageEdited', populated);
+    } catch (err) {
+      console.error('❌ editMessage 처리 중 오류:', err);
+    }
+  });
+
+  // — 메시지 삭제
+  socket.on('deleteMessage', async ({ roomId, messageId, userId }) => {
+    try {
+      const msg = await Message.findById(messageId);
+      if (!msg || msg.sender.toString() !== userId) return;
+      await msg.remove();
+      io.to(roomId.toString()).emit('messageDeleted', messageId);
+    } catch (err) {
+      console.error('❌ deleteMessage 처리 중 오류:', err);
+    }
+  });
+  
 
   socket.on('disconnect', () => {
     console.log('❌ 클라이언트 연결 종료:', socket.id);
@@ -207,8 +251,7 @@ mongoose
     console.log('✅ MongoDB 연결 성공!');
 
     // [🧹 자동 삭제 기능] 마감된 모집 카드 제거
-    const getPostModel = require('../models/Post');
-    const Post = getPostModel(mongoose);
+    const Post = require('../models/Post')
     setInterval(async () => {
       try {
         const now = new Date();

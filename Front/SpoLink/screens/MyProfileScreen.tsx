@@ -1,20 +1,10 @@
 // Front/SpoLink/screens/MyProfileScreen.tsx
 // 화면 맨 위에
 import * as ImagePicker from 'expo-image-picker';
-import { MediaType } from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
+import PostCard from '../components/PostCard';
 import type { Profile } from '../contexts/ProfileContext';
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Image,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import {View, Text, TextInput, TouchableOpacity, Image, StyleSheet, Alert, ActivityIndicator, FlatList,} from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, RouteProp, useRoute } from '@react-navigation/native';
@@ -23,7 +13,7 @@ import type { RootStackParamList } from '../navigation/RootStackParamList';
 import { Picker } from '@react-native-picker/picker';
 import { SERVER_URL } from '../constants';
 import { useProfile } from '../contexts/ProfileContext';
-
+import { Post } from '../navigation/RootStackParamList';
 // 네비게이션 타입 정의
 type MyProfileRouteProp = RouteProp<RootStackParamList, 'MyProfile'>;
 type MyProfileNavProp = NativeStackNavigationProp<RootStackParamList, 'MyProfile'>;
@@ -41,6 +31,8 @@ export default function MyProfileScreen() {
   const [remainingChanges, setRemainingChanges] = useState(3);
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [createdPosts, setCreatedPosts] = useState<Post[]>([]);
+  const [joinedPosts, setJoinedPosts] = useState<Post[]>([]);
 
 
   // ✅ 여기 위치에 작성하면 돼
@@ -56,7 +48,7 @@ export default function MyProfileScreen() {
       aspect: [1, 1],
       quality: 0.7,
     });
-    
+
 
     if (!result.canceled) {
       const imageUri = result.assets[0].uri;
@@ -81,8 +73,8 @@ export default function MyProfileScreen() {
 
         const responseText = await uploadRes.text();
         console.log('📦 서버 응답 본문:', responseText);
-      
-        const { imageUrl } = JSON.parse(responseText);   
+
+        const { imageUrl } = JSON.parse(responseText);
         console.log('✅ 이미지 URL:', imageUrl);
 
         const token = await AsyncStorage.getItem('token');
@@ -93,9 +85,17 @@ export default function MyProfileScreen() {
         });
 
         setProfileImage(imageUrl);
-        if (profile) {
-          setProfile({ ...profile, profileImage: imageUrl });
-        }
+        setProfile({
+          userId: profile?.userId ?? '',
+          nickname: profile?.nickname ?? '',
+          bio: profile?.bio ?? '',
+          ageGroup: profile?.ageGroup ?? '기타',
+          trustScore: profile?.trustScore ?? 0,
+          remainingNicknameChanges: profile?.remainingNicknameChanges ?? 3,
+          profileImage: imageUrl, // 확실히 이걸로 지정
+        });
+
+
 
         Alert.alert('✅ 프로필 사진이 업데이트되었습니다');
       } catch (err) {
@@ -113,7 +113,9 @@ export default function MyProfileScreen() {
         const res = await axios.get(`${SERVER_URL}/users/${userId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        const u = res.data.user as Profile;
+        console.log('📦 응답 구조 확인:', res.data); // 이거 찍고 구조 확인해봐
+
+        const u = res.data as Profile;
         console.log('👤 받아온 사용자 정보:', u); // 디버깅
 
 
@@ -127,9 +129,29 @@ export default function MyProfileScreen() {
 
         console.log('✅ 적용된 ageGroup:', ageGroup);
         console.log('✅ 적용된 profileImage:', profileImage);
+              // ② 내가 만든 모임
+      const { data: mine } = await axios.get<Post[]>(
+        `${SERVER_URL}/posts?writer=${userId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setCreatedPosts(mine);
+
+      // ③ 내가 참가한 모임
+      const { data: joined } = await axios.get<Post[]>(
+        `${SERVER_URL}/users/${userId}/applications`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setJoinedPosts(joined);
+      
 
       } catch (err) {
         console.error('프로필 불러오기 실패:', err);
+        if (axios.isAxiosError(err)) {
+          console.error('  • 응답 status:', err.response?.status);
+          console.error('  • 응답 data:', err.response?.data);
+          console.error('  • 요청 config:', err.config);
+        }
+        
         Alert.alert('❌ 프로필을 불러오는 데 실패했습니다');
       } finally {
         setLoading(false);
@@ -172,6 +194,20 @@ export default function MyProfileScreen() {
     navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
   };
 
+  const handleDelete = (postId: string) => {
+    axios
+      .delete(`${SERVER_URL}/posts/${postId}`)
+      .then(() => {
+        setCreatedPosts(prev => prev.filter(p => p._id !== postId));
+      })
+      .catch(console.warn);
+  };
+
+  // 수정 버튼 눌렀을 때 처리 (예: 수정 화면으로 네비게이트)
+  const handleEdit = (post: Post) => {
+    navigation.navigate('EditPost', { post, userId:profile!.userId, nickname: profile!.nickname});
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -189,18 +225,17 @@ export default function MyProfileScreen() {
           if (editing) {
             pickAndUploadImage();
           }
-        }}>          
-        <Image
+        }}>
+          <Image
             source={profileImage ? { uri: profileImage } : require('../assets/user.png')}
             style={styles.avatar}
           />
         </TouchableOpacity>
-          <Text style={styles.changeText}>사진을 눌러주세요</Text>
-        
+
       </View>
       {editing ? (
         <View style={styles.editBlock}>
-          <Text>닉네임 ({remainingChanges}회 변경 가능)</Text>
+          <Text>닉네임은 최대 3번만 변경가능합니다.</Text>
           <TextInput
             style={styles.input}
             value={nickname}
@@ -246,14 +281,48 @@ export default function MyProfileScreen() {
       <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
         <Text style={styles.logoutText}>로그아웃</Text>
       </TouchableOpacity>
+
+      <Text style={styles.sectionTitle}>내가 만든 모임</Text>
+      <FlatList
+        data={createdPosts}
+        keyExtractor={item => item._id}
+        renderItem={({ item }) => <PostCard
+        post={item}
+        currentUser={profile!.userId}
+        onDelete={() => handleDelete(item._id)}
+        onEdit={() => handleEdit(item)}
+      />}
+        ListEmptyComponent={<Text style={styles.emptyText}>생성한 모임이 없습니다.</Text>}
+      />
+
+      <Text style={styles.sectionTitle}>내가 참가한 모임</Text>
+      <FlatList
+        data={joinedPosts}
+        keyExtractor={item => item._id}
+        renderItem={({ item }) => <PostCard
+        post={item}
+        currentUser={profile!.userId}
+        onDelete={() => handleDelete(item._id)}
+        onEdit={() => handleEdit(item)}
+      />}
+        ListEmptyComponent={<Text style={styles.emptyText}>참가한 모임이 없습니다.</Text>}
+      />
+
+
+
+
+
     </View>
+
+
   );
 }
 
 const styles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  container: { flex: 1, padding: 16, alignItems: 'center', backgroundColor: '#fff' },
-  avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: 16 },
+  container: { flex: 1, padding: 16 },
+  sectionTitle: { fontSize: 18, fontWeight: '600', marginTop: 24, marginBottom: 8 },
+  emptyText: { textAlign: 'center', color: '#666', marginVertical: 16 }, avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: 16 },
   infoBlock: { alignItems: 'center', marginBottom: 24 },
   nickname: { fontSize: 24, fontWeight: 'bold' },
   intro: { fontSize: 16, color: '#555', marginVertical: 8, textAlign: 'center' },

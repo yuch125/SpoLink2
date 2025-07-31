@@ -22,7 +22,7 @@ import { KAKAO_API_KEY } from '../config';
 type PlaceSearchNavProp = NativeStackNavigationProp<RootStackParamList, 'PlaceSearch'>;
 type PlaceSearchRouteProp = RouteProp<RootStackParamList, 'PlaceSearch'>;
 
-const FACILITY_KEYWORDS = ['체육관', '농구장', '축구장', '농구', '야구', '야구장', '배구', '배구장', '축구'];
+const FACILITY_KEYWORDS = ['체육관', '농구장', '축구장', '농구', '배드민턴', '배드민턴장', '런닝', '산책로', '축구'];
 
 const PlaceSearchScreen: React.FC = () => {
   const navigation = useNavigation<PlaceSearchNavProp>();
@@ -38,6 +38,10 @@ const PlaceSearchScreen: React.FC = () => {
   const [places, setPlaces] = useState<KakaoPlace[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    console.log('🚀 PlaceSearchScreen params:', route.params);
+  }, []);
 
   useEffect(() => {
     if (!userId) {
@@ -106,23 +110,32 @@ const PlaceSearchScreen: React.FC = () => {
     }
   };
 
-  const handleSelect = (placeName: string) => {
+  const handleSelect = (place: KakaoPlace) => {
     if (route.params?.from === 'CreatePost') {
       navigation.navigate('CreatePost', {
         userId,
         nickname,
-        selectedPlace: placeName,
+        selectedPlace: {
+          name: place.place_name,
+          latitude: parseFloat(place.y),
+          longitude: parseFloat(place.x),
+        },
         prevData,
       });
     } else if (route.params?.from === 'EditPost' && post) {
       navigation.navigate('EditPost', {
         userId,
         nickname,
-        selectedPlace: placeName,
+        selectedPlace: {
+          name: place.place_name,
+          latitude: parseFloat(place.y),
+          longitude: parseFloat(place.x),
+        },
         post,
       });
     }
   };
+  
 
   const handleDetail = (place: KakaoPlace) => {
     navigation.navigate('PlaceDetail', { place });
@@ -143,7 +156,7 @@ const PlaceSearchScreen: React.FC = () => {
       {item.phone ? <Text style={styles.phone}>{item.phone}</Text> : null}
 
       <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.selectButton} onPress={() => handleSelect(item.place_name)}>
+        <TouchableOpacity style={styles.selectButton} onPress={() => handleSelect(item)}>
           <Text style={styles.buttonText}>📍 장소 선택</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.detailButton} onPress={() => handleDetail(item)}>
@@ -168,7 +181,7 @@ const PlaceSearchScreen: React.FC = () => {
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.input}
-          placeholder="검색어: 체육관, 농구장, 축구장, 야구장, 배구장"
+          placeholder="검색어: 체육관, 농구장, 축구장, 배드민턴장, 산책로, 트레일"
           value={keyword}
           onChangeText={setKeyword}
           onSubmitEditing={() => searchPlaces(keyword)}

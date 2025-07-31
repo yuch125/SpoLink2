@@ -1,10 +1,10 @@
-console.log('▶️ applications 라우터 로드됨');
+// routes/applications.js
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
-
-const Application = require('../models/Application');
+const Post = require('../models/Post');
 const ChatRoom = require('../models/ChatRoom');
+const Application = require('../models/Application');
 
 // 1. 참가 신청 생성
 router.post('/', async (req, res) => {
@@ -50,6 +50,23 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.get('/', async (req, res) => {
+  try {
+    const filter = {};
+    // 쿼리스트링에 writer가 있으면, ObjectId로 바꿔서 필터에 추가
+    if (req.query.writer) {
+      filter.writer = mongoose.Types.ObjectId(req.query.writer);
+    }
+    // status나 expiresAt 같은 추가 필터가 필요하면 여기에 더 추가
+    const posts = await Post.find(filter)
+      .populate('writer', 'userId nickname profileImage');
+    res.json(posts);
+  } catch (err) {
+    console.error('GET /posts error', err);
+    res.status(500).json({ error: '게시글 조회에 실패했습니다.' });
+  }
+});
+
 // 3. 특정 모집글의 신청자 목록 조회 (모집 주최자용)
 router.get('/post/:postId', async (req, res) => {
   try {
@@ -72,7 +89,12 @@ router.get('/post/:postId', async (req, res) => {
 router.patch('/:id/accept', async (req, res) => {
   console.log('▶️ [applications] accept 핸들러 진입, applicationId =', req.params.id);
   try {
-    const application = await Application.findById(req.params.id).populate('post');
+    const application = await Application
+      .findById(req.params.id)
+      .populate({
+        path: 'post',
+        populate: { path: 'writer', model: 'User', select: '_id nickname' }
+      });
     if (!application) {
       return res.status(404).json({ error: '해당 신청을 찾을 수 없습니다' });
     }
@@ -82,13 +104,20 @@ router.patch('/:id/accept', async (req, res) => {
     let chatRoom = await ChatRoom.findOne({ postId: application.post._id });
 
     if (!chatRoom) {
+
+      const hostId = application.post.writer._id;          // ← 반드시 _id
+      const hostNick = application.post.writer.nickname;     // ← populate에서 가져온 닉네임
+      // ✅ new를 붙여서 호출하세요
+      const appId = new mongoose.Types.ObjectId(application.applicant.userId);
+      const appNick = application.applicant.nickname;
+
       // 새 채팅방 생성
       chatRoom = await ChatRoom.create({
         postId: application.post._id,
         title: application.post.content,
         participants: [
-          { userId: String(application.post.writer.userId), nickname: application.post.writer.nickname },
-          { userId: String(application.applicant.userId), nickname: application.applicant.nickname },
+          { userId: hostId, nickname: hostNick },
+          { userId: appId, nickname: appNick }
         ],
       });
       console.log('▶️ 채팅방 생성 완료:', chatRoom._id);
@@ -99,7 +128,7 @@ router.patch('/:id/accept', async (req, res) => {
       );
       if (!exists) {
         chatRoom.participants.push({
-          userId: String(application.applicant.userId),
+          userId: application.applicant.userId,
           nickname: application.applicant.nickname,
         });
         await chatRoom.save();
@@ -134,5 +163,29 @@ router.patch('/:id/reject', async (req, res) => {
     res.status(500).json({ error: '서버 오류 - 거절 실패' });
   }
 });
+
+router.get('/:userId/applications', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const apps = await Application
+      .find({ 'applicant.userId': userId, status: 'accepted' })  // ← 이렇게
+      .populate({
+        path: 'post',
+        populate: { 
+          path: 'writer', 
+          select: 'userId nickname profileImage' 
+        }
+      });
+    const posts = apps.map(a => a.post);
+    return res.json(posts);
+  } catch (err) {
+    console.error('참가 모임 조회 오류', err);
+    return res.status(500).json({ error: '참가 모임을 불러올 수 없습니다.' });
+  }
+});
+
+
+
+
 
 module.exports = router;

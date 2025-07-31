@@ -2,8 +2,8 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const router = express.Router();
 
+const router = express.Router();
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'uploads/'); // uploads 폴더 필요
