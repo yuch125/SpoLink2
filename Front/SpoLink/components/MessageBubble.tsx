@@ -21,9 +21,11 @@ export type Message = {
 type MessageBubbleProps = {
   message: Message;
   currentUserId: string;
+  unreadCount?: number;
+  onDelete?:() => void;
 };
 
-export default function MessageBubble({ message, currentUserId }: MessageBubbleProps) {
+export default function MessageBubble({ message, currentUserId, unreadCount = 0, onDelete,}: MessageBubbleProps) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { profile } = useProfile();   // ← 절대 컴포넌트 밖에 두지 마세요!
 
@@ -61,6 +63,11 @@ export default function MessageBubble({ message, currentUserId }: MessageBubbleP
           <Text style={styles.time}>
             {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </Text>
+        )}
+        {isOwn && unreadCount > 0 && (
+          <View style={styles.badgeContainer}>
+            <Text style={styles.badgeText}>{unreadCount}</Text>
+          </View>
         )}
       </View>
     </View>
@@ -125,5 +132,22 @@ const styles = StyleSheet.create({
   avatarWrapper: {
     padding: 4,           // 터치 영역을 조금 키워줍니다 (선택)
     borderRadius: 20,     // 터치 피드백이 자연스럽도록
+  },
+  badgeContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#FF3B30',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
 });

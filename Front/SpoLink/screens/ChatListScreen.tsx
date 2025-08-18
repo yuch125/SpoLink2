@@ -11,8 +11,12 @@ import type { RouteProp } from '@react-navigation/native';
 // 🔸 채팅방 타입 명시
 type ChatRoom = {
   _id: string;
+  postId: string; // 🔹 모집글 ID
   postTitle: string;
+  participantCount: number;
+  maxParticipants: number;
   lastMessage: string;
+  title: string;
 };
 
 // 🔸 props 타입 지정
@@ -40,9 +44,18 @@ export default function ChatListScreen({ route }: Props) {
     fetchRooms();
   }, [userId]);
 
-  const goToChatRoom = (roomId: string) => {
-    navigation.navigate('ChatRoom', { roomId, userId, nickname });
+  const goToChatRoom = (roomId: string, postId: string, title: string, initialCount: number, maxParticipants: number) => {
+    navigation.navigate('ChatRoom', {
+      roomId,
+      postId, // 🔹 여기 추가
+      userId,
+      nickname,
+      title,
+      initialCount,
+      maxParticipants,
+    });
   };
+  
 
   return (
     <View style={styles.container}>
@@ -50,7 +63,7 @@ export default function ChatListScreen({ route }: Props) {
         data={rooms}
         keyExtractor={(item) => item._id}
         renderItem={({ item }) => (
-          <TouchableOpacity onPress={() => goToChatRoom(item._id)} style={styles.room}>
+          <TouchableOpacity onPress={() =>goToChatRoom(item._id, item.postId, item.title, item.participantCount, item.maxParticipants)} style={styles.room}>
             <Text style={styles.title}>🏀 {item.postTitle}</Text>
             <Text style={styles.message}>💬 {item.lastMessage}</Text>
           </TouchableOpacity>

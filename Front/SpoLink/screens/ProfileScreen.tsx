@@ -6,54 +6,121 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  FlatList,
+  TouchableOpacity,
 } from 'react-native';
-import { RouteProp, useRoute } from '@react-navigation/native';
+import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SERVER_URL } from '../constants';
-import type { RootStackParamList } from '../navigation/RootStackParamList';
+import type { RootStackParamList, Post } from '../navigation/RootStackParamList';
+import PostCard from '../components/PostCard';
+import { useProfile } from '../contexts/ProfileContext';
 
 type ProfileRoute = RouteProp<RootStackParamList, 'Profile'>;
 
 type ProfileData = {
   nickname: string;
   bio?: string;
-  avatarUrl?: string;
-  trustScore?: number;
+  profileImage?: string;
+  trustScore: number;
+  trustStats?: { likes: number; dislikes: number }; // ✅ 추가
+  ageGroup?: string; // ✅ age 대신 ageGroup으로
+  createdPosts: Post[];
+  joinedPosts: Post[];
 };
 
 export default function ProfileScreen() {
   const { userId } = useRoute<ProfileRoute>().params;
-  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const navigation = useNavigation<any>();
+  const { profile: me } = useProfile();
+  const viewerId = me?.userId;
+  const isMine = viewerId === userId;
+
+  // 내 프로필이면 MyProfileScreen으로 이동
+  useEffect(() => {
+    if (isMine) {
+      navigation.replace('MyProfile', { userId });
+    }
+  }, [isMine]);
+
+  const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasApplied, setHasApplied] = useState<Record<string, boolean>>({});
+
+  // 신뢰도 점수 → 한글 라벨
+  const getTrustLabel = (score: number) => {
+    if (score >= 80) return '매우높음';
+    if (score >= 60) return '높음';
+    if (score >= 40) return '보통';
+    if (score >= 20) return '낮음';
+    return '매우낮음';
+  };
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    (async () => {
       try {
-        const res = await axios.get(`${SERVER_URL}/users/${userId}`);
+        const token = await AsyncStorage.getItem('token');
+        const res = await axios.get(`${SERVER_URL}/users/${userId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         const u = res.data;
 
-        setProfile({
+        const { data: mine } = await axios.get<Post[]>(
+          `${SERVER_URL}/posts?writer=${userId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        const { data: joined } = await axios.get<Post[]>(
+          `${SERVER_URL}/users/${userId}/applications`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        setProfileData({
           nickname: u.nickname,
           bio: u.bio,
-          avatarUrl: u.profileImage,
+          profileImage: u.profileImage,
           trustScore: u.trustScore ?? 0,
+          trustStats: u.trustStats, // 서버에서 { likes, dislikes } 제공된다고 가정
+          ageGroup: u.ageGroup,
+          createdPosts: mine,
+          joinedPosts: joined,
         });
-      } catch (err: any) {
+
+
+        const appliedMap: Record<string, boolean> = {};
+        joined.forEach(p => { appliedMap[p._id] = true; });
+        setHasApplied(appliedMap);
+      } catch (err) {
         console.error('❌ 프로필 조회 실패:', err);
         Alert.alert('프로필 조회 오류', '사용자 정보를 불러오는 데 실패했습니다.');
       } finally {
         setLoading(false);
       }
-    };
-
-    fetchProfile();
+    })();
   }, [userId]);
+
+  const handleApply = async (postId: string) => {
+    if (!viewerId) return Alert.alert('로그인이 필요합니다');
+    try {
+      const token = await AsyncStorage.getItem('token');
+      await axios.post(
+        `${SERVER_URL}/applications`,
+        { postId, applicant: { userId: viewerId, nickname: me?.nickname } },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setHasApplied(prev => ({ ...prev, [postId]: true }));
+      Alert.alert('참가신청이 완료되었습니다');
+    } catch (err: any) {
+      console.error('❌ 참가신청 실패:', err);
+      Alert.alert('참가신청 오류', err.response?.data?.error || '다시 시도해주세요');
+    }
+  };
 
   if (loading) {
     return <ActivityIndicator style={{ flex: 1 }} size="large" />;
   }
-
-  if (!profile) {
+  if (!profileData) {
     return (
       <View style={styles.center}>
         <Text>프로필 정보를 불러올 수 없습니다.</Text>
@@ -65,56 +132,75 @@ export default function ProfileScreen() {
     <View style={styles.container}>
       <Image
         source={
-          profile.avatarUrl
-            ? { uri: profile.avatarUrl }
+          profileData.profileImage
+            ? { uri: profileData.profileImage }
             : require('../assets/user.png')
         }
         style={styles.avatar}
       />
-      <Text style={styles.nickname}>{profile.nickname}</Text>
-      <Text style={styles.bio}>
-        {profile.bio?.trim() || '한줄 소개가 없습니다.'}
-      </Text>
+      <Text style={styles.nickname}>{profileData.nickname}</Text>
+      <Text style={styles.bio}>{profileData.bio?.trim() || '한줄 소개가 없습니다.'}</Text>
       <Text style={styles.trust}>
-        신뢰도: {profile.trustScore?.toFixed(0) ?? 0}%
+        신뢰도: {getTrustLabel(profileData.trustScore)}
+        {profileData.trustStats && (
+          <> ({profileData.trustStats.likes} 👍 / {profileData.trustStats.dislikes} 👎)</>
+        )}
       </Text>
+
+      <Text style={styles.age}>
+        나이: {profileData.ageGroup || '미입력'}
+      </Text>
+
+      <Text style={styles.sectionTitle}>생성한 모임</Text>
+      <FlatList
+        data={profileData.createdPosts}
+        keyExtractor={item => item._id}
+        renderItem={({ item }) => (
+          <View>
+            <PostCard post={item} currentUser={viewerId || ''} />
+          </View>
+        )}
+        ListEmptyComponent={<Text style={styles.emptyText}>생성한 모임이 없습니다.</Text>}
+      />
+
+      <Text style={styles.sectionTitle}>참가한 모임</Text>
+      <FlatList
+        data={profileData.joinedPosts}
+        keyExtractor={item => item._id}
+        renderItem={({ item }) => (
+          <View>
+            <PostCard post={item} currentUser={viewerId || ''} />
+          </View>
+        )}
+        ListEmptyComponent={<Text style={styles.emptyText}>참가한 모임이 없습니다.</Text>}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 24,
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  container: { flex: 1, padding: 16, backgroundColor: '#fff' }, // padding 줄임
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+
+  // 프로필 영역 ↓
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginBottom: 16,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 12,
+    alignSelf: 'center',
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#ccc'
   },
-  nickname: {
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
-  bio: {
-    fontSize: 14,
-    color: '#555',
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  trust: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 6,
-  },
+  nickname: { fontSize: 18, fontWeight: 'bold', textAlign: 'center' },
+  bio: { fontSize: 12, color: '#555', marginTop: 4, textAlign: 'center' },
+  trust: { fontSize: 11, color: '#888', marginTop: 4, textAlign: 'center' },
+  age: { fontSize: 11, color: '#888', marginTop: 2, textAlign: 'center' },
+
+  // 리스트 영역 ↓
+  sectionTitle: { fontSize: 16, fontWeight: '600', marginTop: 16, marginBottom: 6 },
+
+  // PostCard를 조금 더 크게 보이도록
+  postWrapper: { marginVertical: 6 },
+  emptyText: { textAlign: 'center', color: '#666', marginVertical: 12 },
 });

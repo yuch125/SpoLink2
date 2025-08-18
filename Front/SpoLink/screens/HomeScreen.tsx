@@ -4,6 +4,7 @@ import {
   requestForegroundPermissionsAsync,
   LocationObject,
 } from 'expo-location';
+import socket from '../utils/socket';
 import React, { useEffect, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
@@ -37,8 +38,8 @@ import { haversineDistance } from '../utils/distance';
 const categoryIcons: Record<string, any> = {
   농구: require('../assets/basketball.png'),
   축구: require('../assets/soccer-ball-variant.png'),
-  배드민턴: require('../assets/baseball-ball.png'),
-  런닝: require('../assets/volleyball-ball.png'),
+  배드민턴: require('../assets/shuttlecock.png'),
+  런닝: require('../assets/shoe.png'),
 };
 
 type HomeNavProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -159,6 +160,29 @@ export default function HomeScreen() {
       })();
     }, [userCoords])
   );
+  
+  useEffect(() => {
+    const handler = (p: { postId: string; participantCount: number; maxParticipants: number; isFull: boolean }) => {
+      setPosts(prev =>
+        prev.map(post =>
+          post._id === p.postId
+            ? { ...post, participantCount: p.participantCount, maxParticipants: p.maxParticipants, isFull: p.isFull }
+            : post
+        )
+      );
+    };
+  
+    // 1) 구독은 여기서 수행
+    socket.on('post:participantsUpdated', handler);
+  
+    // 2) 정리 함수는 반드시 'void'를 반환해야 함
+    return () => {
+      socket.off('post:participantsUpdated', handler);
+    };
+  }, []);
+  
+  
+  
 
 
   const handleDelete = async (postId: string) => {
@@ -175,6 +199,7 @@ export default function HomeScreen() {
   };
 
 
+  
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -259,7 +284,7 @@ export default function HomeScreen() {
           onPress={() => navigation.navigate('MyProfile', { userId })}
         >
           <Image
-            source={require('../assets/user.png')}
+            source={require('../assets/user (2).png')}
             style={styles.navIcon}
           />
         </TouchableOpacity>

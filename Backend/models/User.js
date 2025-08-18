@@ -13,8 +13,13 @@ const userSchema = new mongoose.Schema(
     // 나이 그룹
     ageGroup: {
       type: String,
-      enum: ['중1', '중2', '중3', '고1', '고2', '고3', '대학생', '기타'],
-      default: '기타'
+      enum: [
+        '중1','중2','중3',
+        '고1','고2','고3',
+        '대학생',
+        '20대','30대','40대','50대 이상',
+        '기타'
+      ],      default: '기타'
     },
 
     profileImage: {
@@ -23,29 +28,39 @@ const userSchema = new mongoose.Schema(
     },
 
     // 신뢰도 점수 (0~100)
-    trustScore: { type: Number, default: 0 },
-
-    // 닉네임 변경 가능 횟수 관리
-    nicknameChangeCount: { type: Number, default: 0 },
-  },
-  {
-    timestamps: true,
-    collection: 'users',
-    toJSON: {
-      virtuals: true,
-      versionKey: false,
-      transform: (_, ret) => {
-        ret.userId = ret._id;
-        delete ret._id;
-        delete ret.password;
-        ret.bio = ret.bio;
-        ret.ageGroup = ret.ageGroup;
-        ret.trustScore = ret.trustScore;
-        ret.remainingNicknameChanges = 3 - (ret.nicknameChangeCount || 0);// 보안상 password는 응답에서 제거
-        return ret;
-      },
+    trustScore: {
+      type: Number,
+      default: 50.0  // 기본값: 보통
     },
-  }
+    trustScoreCount: {
+      type: Number,
+      default: 1,
+    },
+
+    likesCount: { type: Number, default: 0 },
+ dislikesCount: { type: Number, default: 0 },
+
+  // 닉네임 변경 가능 횟수 관리
+  nicknameChangeCount: { type: Number, default: 0 },
+  },
+{
+  timestamps: true,
+    collection: 'users',
+      toJSON: {
+    virtuals: true,
+      versionKey: false,
+        transform: (_, ret) => {
+          ret.userId = ret._id;
+          delete ret._id;
+          delete ret.password;
+          ret.bio = ret.bio;
+          ret.ageGroup = ret.ageGroup;
+          ret.trustScore = ret.trustScore;
+          ret.remainingNicknameChanges = 3 - (ret.nicknameChangeCount || 0);// 보안상 password는 응답에서 제거
+          return ret;
+        },
+    },
+}
 );
 
 module.exports = mongoose.models.User || mongoose.model('User', userSchema);

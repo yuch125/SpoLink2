@@ -1,5 +1,5 @@
 // screens/PostDetailScreen.tsx
-
+import socket from '../utils/socket';
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { RouteProp, useRoute } from '@react-navigation/native';
@@ -10,13 +10,8 @@ type PostDetailRouteProp = RouteProp<RootStackParamList, 'PostDetail'>;
 
 export default function PostDetailScreen() {
   const route = useRoute<PostDetailRouteProp>();
-  const {
-    postId,
-    title,
-    content,
-    writerNickname,
-  } = route.params;
-
+  const { postId, title, content, writerNickname } = route.params;
+  
   return (
     <ScrollView style={styles.container}>
       <View style={styles.postBox}>
@@ -25,7 +20,7 @@ export default function PostDetailScreen() {
         <Text style={styles.content}>{content}</Text>
       </View>
 
-      {/* 댓글 섹션 */}
+      {/* 댓글은 항상 보이도록 */}
       <CommentSection postId={postId} />
     </ScrollView>
   );

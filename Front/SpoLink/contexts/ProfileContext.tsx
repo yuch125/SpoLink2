@@ -4,11 +4,18 @@ export type Profile = {
   userId: string;
   nickname: string;
   bio: string;
-  ageGroup: string;
+  age: string;  // 자유 입력 나이 필드
   trustScore: number;
   remainingNicknameChanges: number;
-  profileImage?: string; // ← 이게 있어야 돼!
-
+  profileImage?: string;
+  ageGroup?: string;
+  trust?: {
+    grade: string;
+    score: number;
+    total: number;
+    likes: number;
+    dislikes: number;
+  };
 };
 
 type ProfileContextType = {
@@ -24,15 +31,14 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
 
   const setProfile = (update: Partial<Profile>) => {
     setProfileState(prev => {
-      // 초기 상태라면 강제로 타입캐스팅하거나 기본값 적용 필요
       if (!prev) {
         return {
           userId: update.userId ?? '',
           nickname: update.nickname ?? '',
           bio: update.bio ?? '',
-          ageGroup: update.ageGroup ?? '기타',
+          age: update.age ?? '',
           trustScore: update.trustScore ?? 0,
-          profileImage: update.profileImage ?? '', // ✅ 이거 추가!
+          profileImage: update.profileImage ?? '',
           remainingNicknameChanges: update.remainingNicknameChanges ?? 3,
         };
       }

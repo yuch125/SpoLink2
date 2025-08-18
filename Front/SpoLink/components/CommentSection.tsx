@@ -124,76 +124,138 @@ export default function CommentSection({ postId }: Props) {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity onPress={() => setExpanded(prev => !prev)}>
-        <Text style={styles.toggleText}>{expanded ? '댓글 접기 ▲' : '댓글 펼치기 ▼'}</Text>
-      </TouchableOpacity>
+      {/* 댓글 입력창 */}
+      <View style={styles.inputRow}>
+        <TextInput
+          placeholder="댓글을 입력하세요"
+          style={styles.input}
+          value={newComment}
+          onChangeText={setNewComment}
+        />
+        <TouchableOpacity onPress={handleSubmit} style={styles.submitButton}>
+          <Text style={styles.submitText}>작성</Text>
+        </TouchableOpacity>
+      </View>
 
-      {expanded && (
-        <>
-          <View style={styles.inputRow}>
-            <TextInput placeholder="댓글을 입력하세요" style={styles.input} value={newComment} onChangeText={setNewComment} />
-            <TouchableOpacity onPress={handleSubmit} style={styles.submitButton}><Text style={styles.submitText}>작성</Text></TouchableOpacity>
-          </View>
+      {/* 댓글 목록 */}
+      <FlatList
+        data={comments}
+        keyExtractor={item => item._id}
+        renderItem={({ item }) => (
+          <View style={styles.commentBox}>
+            <TouchableOpacity
+              style={styles.profileRow}
+              onPress={() => navigation.navigate('Profile', { userId: item.userId })}
+            >
+              <Image
+                source={
+                  item.author.profileImage
+                    ? { uri: `${item.author.profileImage}?t=${Date.now()}` }
+                    : require('../assets/user.png')
+                }
+                style={styles.avatar}
+              />
+              <Text style={styles.nickname}>{item.author.nickname}</Text>
+            </TouchableOpacity>
 
-          <FlatList
-            data={comments}
-            keyExtractor={item => item._id}
-            renderItem={({ item }) => (
-              <View style={styles.commentBox}>
-                <TouchableOpacity style={styles.profileRow} onPress={() => navigation.navigate('Profile', { userId: item.userId })}>
-                  <Image source={item.author.profileImage ? { uri: `${item.author.profileImage}?t=${Date.now()}` } : require('../assets/user.png')} style={styles.avatar} />
-                  <Text style={styles.nickname}>{item.author.nickname}</Text>
+            {editingId === item._id ? (
+              <>
+                <TextInput
+                  style={[styles.input, { marginTop: 8 }]}
+                  value={editedContent}
+                  onChangeText={setEditedContent}
+                />
+                <View style={styles.editFooter}>
+                  <TouchableOpacity
+                    onPress={() => handleUpdate(item._id)}
+                    style={styles.submitButton}
+                  >
+                    <Text style={styles.submitText}>완료</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setEditingId(null);
+                      setEditedContent('');
+                    }}
+                    style={[styles.submitButton, styles.cancelButton]}
+                  >
+                    <Text style={styles.submitText}>취소</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={styles.contentText}>
+                  {item.content}
+                  {new Date(item.updatedAt) > new Date(item.createdAt) && (
+                    <Text style={styles.editedLabel}> (수정됨)</Text>
+                  )}
+                </Text>
+                <Text style={styles.time}>{timeAgo(item.createdAt)}</Text>
+                <View style={styles.commentFooter}>
+                  {item.userId === userId && (
+                    <>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setEditingId(item._id);
+                          setEditedContent(item.content);
+                        }}
+                      >
+                        <Text style={styles.actionButton}>수정</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => handleDelete(item._id)}>
+                        <Text style={styles.actionButton}>삭제</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                  <TouchableOpacity onPress={() => setReplyToId(item._id)}>
+                    <Text style={styles.replyButton}>답글 달기</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+
+            {replyToId === item._id && (
+              <View style={styles.replyForm}>
+                <TextInput
+                  style={styles.input}
+                  value={replyContent}
+                  onChangeText={setReplyContent}
+                  placeholder="답글을 입력하세요"
+                />
+                <TouchableOpacity
+                  onPress={() => handleReplySubmit(item._id)}
+                  style={styles.submitButton}
+                >
+                  <Text style={styles.submitText}>등록</Text>
                 </TouchableOpacity>
-
-                {editingId === item._id ? (
-                  <> 
-                    <TextInput style={[styles.input, { marginTop: 8 }]} value={editedContent} onChangeText={setEditedContent} />
-                    <View style={styles.editFooter}>
-                      <TouchableOpacity onPress={() => handleUpdate(item._id)} style={styles.submitButton}><Text style={styles.submitText}>완료</Text></TouchableOpacity>
-                      <TouchableOpacity onPress={() => { setEditingId(null); setEditedContent(''); }} style={[styles.submitButton, styles.cancelButton]}><Text style={styles.submitText}>취소</Text></TouchableOpacity>
-                    </View>
-                  </>
-                ) : (
-                  <>  
-                    <Text style={styles.contentText}>{item.content}{new Date(item.updatedAt) > new Date(item.createdAt) && <Text style={styles.editedLabel}> (수정됨)</Text>}</Text>
-                    <Text style={styles.time}>{timeAgo(item.createdAt)}</Text>
-                    <View style={styles.commentFooter}>
-                      {item.userId === userId && (
-                        <>  
-                          <TouchableOpacity onPress={() => { setEditingId(item._id); setEditedContent(item.content); }}><Text style={styles.actionButton}>수정</Text></TouchableOpacity>
-                          <TouchableOpacity onPress={() => handleDelete(item._id)}><Text style={styles.actionButton}>삭제</Text></TouchableOpacity>
-                        </>
-                      )}
-                      <TouchableOpacity onPress={() => setReplyToId(item._id)}><Text style={styles.replyButton}>답글 달기</Text></TouchableOpacity>
-                    </View>
-                  </>
-                )}
-
-                {replyToId === item._id && (
-                  <View style={styles.replyForm}>
-                    <TextInput style={styles.input} value={replyContent} onChangeText={setReplyContent} placeholder="답글을 입력하세요" />
-                    <TouchableOpacity onPress={() => handleReplySubmit(item._id)} style={styles.submitButton}><Text style={styles.submitText}>등록</Text></TouchableOpacity>
-                  </View>
-                )}
-
-                {item.replies?.map(reply => (
-                  <View key={reply._id} style={styles.replyContainer}>
-                    <View style={styles.replyHeader}>
-                      <Image source={reply.author.profileImage ? { uri: `${reply.author.profileImage}?t=${Date.now()}` } : require('../assets/user.png')} style={styles.replyAvatar} />
-                      <Text style={styles.replyNickname}>{reply.author.nickname}</Text>
-                      <Text style={styles.replyTime}>{timeAgo(reply.createdAt)}</Text>
-                    </View>
-                    <Text style={styles.replyContent}>{reply.content}</Text>
-                  </View>
-                ))}
               </View>
             )}
-          />
-        </>
-      )}
+
+            {item.replies?.map(reply => (
+              <View key={reply._id} style={styles.replyContainer}>
+                <View style={styles.replyHeader}>
+                  <Image
+                    source={
+                      reply.author.profileImage
+                        ? { uri: `${reply.author.profileImage}?t=${Date.now()}` }
+                        : require('../assets/user.png')
+                    }
+                    style={styles.replyAvatar}
+                  />
+                  <Text style={styles.replyNickname}>{reply.author.nickname}</Text>
+                  <Text style={styles.replyTime}>{timeAgo(reply.createdAt)}</Text>
+                </View>
+                <Text style={styles.replyContent}>{reply.content}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+      />
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: { padding: 16, borderTopWidth: 1, borderColor: '#ddd', backgroundColor: '#fafafa' },

@@ -36,7 +36,7 @@ export default function CreatePostScreen() {
     navigation.navigate('Login');
     return null;
   }
-
+  const [preferredAgeGroups, setPreferredAgeGroups] = useState<string[]>([]);
   const [category, setCategory] = useState('');
   const [content, setContent] = useState('');
   const [locationName, setLocationName] = useState<string>('');                // 화면에 보여줄 텍스트
@@ -51,7 +51,7 @@ export default function CreatePostScreen() {
   const [isSelectingStartTime, setIsSelectingStartTime] = useState(true);
 
   useEffect(() => {
-    
+
     if (selectedPlace) {
       console.log('🧭 선택된 장소:', selectedPlace);
       const { name, latitude, longitude } = route.params.selectedPlace;
@@ -61,6 +61,19 @@ export default function CreatePostScreen() {
     }
   }, [route.params?.selectedPlace]);
 
+
+  const toggleAgeGroup = (age: string) => {
+    if (preferredAgeGroups.includes(age)) {
+      // 이미 선택된 항목이면 제거
+      setPreferredAgeGroups(preferredAgeGroups.filter(a => a !== age));
+    } else {
+      if (preferredAgeGroups.length < 2) {
+        setPreferredAgeGroups([...preferredAgeGroups, age]);
+      } else {
+        Alert.alert("최대 2개까지 선택할 수 있습니다.");
+      }
+    }
+  };
 
 
   const onChangeDate = (event: any, selectedDate?: Date) => {
@@ -97,7 +110,7 @@ export default function CreatePostScreen() {
       maxParticipants,
       participants: 1,
       expiresAt,
-      locationName,  
+      locationName,
       location: {
         type: 'Point',
         coordinates: coordinates
@@ -105,6 +118,8 @@ export default function CreatePostScreen() {
           : [0, 0],  // 좌표가 없으면 기본값 (필요시 처리)
       },
       detail,
+      preferredAgeGroups,   // ✅ 추가
+
     };
     console.log('🧾 생성 요청 데이터:', newPost);
     try {
@@ -149,7 +164,7 @@ export default function CreatePostScreen() {
       </View>
 
       <TextInput
-        placeholder="모집 내용"
+        placeholder="제목"
         style={styles.input}
         value={content}
         onChangeText={setContent}
@@ -202,20 +217,31 @@ export default function CreatePostScreen() {
       </TouchableOpacity>
 
       <TextInput
-        placeholder="세부사항 (예: 준비물 등)"
+        placeholder="세부사항 (예:준비물 : 농구화)"
         style={styles.input}
         value={detail}
         onChangeText={setDetail}
       />
 
-      <TouchableOpacity
-        style={[styles.input, styles.datePickerBox]}
-        onPress={() => setShowDatePicker(true)}
-      >
-        <Text style={{ color: '#000' }}>
-          모집 마감시간: {expiresAt.toLocaleString()}
-        </Text>
-      </TouchableOpacity>
+      <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8 }}>선호 연령대 (최대 2개)</Text>
+      <View style={styles.ageContainer}>
+        {["중학생", "고등학생", "20대", "30대", "40대", "50대", "상관없음"].map(age => (
+          <TouchableOpacity
+            key={age}
+            style={[
+              styles.ageButton,
+              preferredAgeGroups.includes(age) && styles.ageButtonSelected
+            ]}
+            onPress={() => toggleAgeGroup(age)}
+          >
+            <Text style={preferredAgeGroups.includes(age) ? styles.ageTextSelected : styles.ageText}>
+              {age}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+
 
       {showDatePicker && (
         <DateTimePicker
@@ -307,4 +333,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#000',
   },
+  ageContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 12,
+  },
+  ageButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    margin: 4,
+    backgroundColor: '#f2f2f2',
+  },
+  ageButtonSelected: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  ageText: {
+    color: '#000',
+  },
+  ageTextSelected: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  
 });

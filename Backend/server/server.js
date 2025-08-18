@@ -14,14 +14,15 @@ require('dotenv').config({ path: __dirname + '/../.env' });
 const app = express();
 const server = http.createServer(app)
 const io = socketIo(server, {
-  cors: {
-    origin: '*',
-    methods: ['GET', 'POST'],
-  },
+  cors: { origin: '*', methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'] }
 });
+app.set('io', io);
+
 
 // ✅ 메시지 DB 모델 import
 const Message = require('../models/Message');
+const Post = require("../models/Post")
+const roomMembers = new Map(); // 중복 카운트 방지
 
 // ✅ Socket.IO 설정
 io.on('connection', (socket) => {
@@ -43,50 +44,71 @@ io.on('connection', (socket) => {
     }
   });
 
-    // — 읽음 표시
- socket.on('readMessage', async ({ roomId, messageId, userId }) => {
+  socket.on('readMessage', async ({ roomId, messageId, userId }) => {
     try {
-      await Message.findByIdAndUpdate(messageId, {
-        $addToSet: { readBy: userId }
-      });
-      io.to(roomId.toString()).emit('messageRead', { messageId, readerId: userId });
+      const message = await Message.findById(messageId);
+      if (!message) return;
+  
+      // ObjectId → String 변환 후 비교
+      const readByStrings = message.readBy.map(id => id.toString());
+      if (!readByStrings.includes(userId)) {
+        message.readBy.push(userId); // 그대로 ObjectId or string 상관없음
+        await message.save();
+  
+        io.to(roomId).emit('messageRead', { messageId, readerId: userId });
+      } else {
+        console.log('📛 이미 읽은 메시지라 emit 안 함');
+      }
     } catch (err) {
-      console.error('❌ readMessage 처리 중 오류:', err);
+      console.error('❌ 메시지 읽음 처리 오류:', err);
     }
   });
-
-  // — 메시지 수정
-  socket.on('editMessage', async ({ roomId, messageId, userId, content }) => {
-    try {
-      const msg = await Message.findById(messageId);
-      if (!msg || msg.sender.toString() !== userId) return;
-      msg.content   = content;
-      msg.updatedAt = new Date();
-      await msg.save();
-      const populated = await msg.populate('sender', 'nickname profileImage');
-      io.to(roomId.toString()).emit('messageEdited', populated);
-    } catch (err) {
-      console.error('❌ editMessage 처리 중 오류:', err);
-    }
-  });
+  
+  
+  
 
   // — 메시지 삭제
   socket.on('deleteMessage', async ({ roomId, messageId, userId }) => {
     try {
       const msg = await Message.findById(messageId);
-      if (!msg || msg.sender.toString() !== userId) return;
-      await msg.remove();
+
+      console.log('✅ msg:', msg);
+      console.log('✅ msg.constructor.name:', msg?.constructor?.name);
+      console.log('✅ typeof msg.remove:', typeof msg?.remove);
+      
+
+      if (!msg) {
+        console.warn('❌ 메시지를 찾을 수 없음:', messageId);
+        return;
+      }
+
+      if (String(msg.sender) !== userId) {
+        console.warn('❌ 삭제 권한 없음:', userId);
+        return;
+      }
+
+      await msg.deleteOne(); // 여기가 문제 터지는 부분
       io.to(roomId.toString()).emit('messageDeleted', messageId);
     } catch (err) {
       console.error('❌ deleteMessage 처리 중 오류:', err);
     }
   });
-  
+
 
   socket.on('disconnect', () => {
     console.log('❌ 클라이언트 연결 종료:', socket.id);
   });
+
+  // - 평가 요청 메시지
+  socket.on('endMeeting', ({ roomId }) => {
+    io.to(roomId).emit('trustRequest', {
+      message: '모임이 종료되었습니다! 참가자들을 평가해주세요.',
+    });
+  });
+
 });
+
+
 
 module.exports = { app, server };
 
@@ -113,6 +135,9 @@ const postsRouter = require('../routes/posts');
 const messageRoutes = require('../routes/messages');
 const chatRoomRoutes = require('../routes/chatrooms');
 const uploadRoutes = require('../routes/upload');
+const trustRouter = require('../routes/trust')
+const TrustEvaluation = require('../models/TrustEvaluation')
+const Evaluation = require('../models/Evaluation')
 // ─────────────────────────────────────────────
 // 🔗 3. 라우터 등록
 // ─────────────────────────────────────────────
@@ -121,7 +146,8 @@ app.use((req, res, next) => {
   console.log(`📥 Incoming → [${req.method}] ${req.url}`);
   next();
 });
-
+applicationRoutes.setIo(io);
+app.use('/evaluations', require('../routes/evaluations'));
 app.use('/applications', applicationRoutes);
 app.use('/users', usersRouter);
 app.use('/comments', commentRoutes);
@@ -130,6 +156,8 @@ app.use('/messages', messageRoutes)
 app.use('/chatrooms', chatRoomRoutes);
 app.use('/uploads', express.static('uploads'));
 app.use('/upload', require('../routes/upload'));
+app.use('/trust', trustRouter);
+
 // ─────────────────────────────────────────────
 // 🔧 4. 유틸성 API
 // ─────────────────────────────────────────────

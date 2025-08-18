@@ -3,18 +3,18 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import type { Post } from '../navigation/RootStackParamList';
 import { SERVER_URL } from '../constants';
 import axios from 'axios';
-import CommentSection from './CommentSection'; // ← 경로는 맞는지 꼭 확인!
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/RootStackParamList';
 import { useProfile } from '../contexts/ProfileContext'; // ✅ 추가
 import { Image } from 'react-native';
+import { FontAwesome } from '@expo/vector-icons';
 
 type Props = {
   post: Post;
   currentUser: string; // userId
-  onDelete: () => void;
-  onEdit: () => void;
+  onDelete?: () => void;
+  onEdit?: () => void;
 };
 
 export default function PostCard({ post, currentUser, onDelete, onEdit }: Props) {
@@ -29,18 +29,18 @@ export default function PostCard({ post, currentUser, onDelete, onEdit }: Props)
       ? post.writer
       : post.writer?._id || '';
 
-      const writerNickname =
-      typeof post.writer === 'object' && post.writer?.nickname
+  const writerNickname =
+    typeof post.writer === 'object' && post.writer?.nickname
       ? post.writer.nickname
       : '익명';
-      console.log('📍 post.locationName =', post.locationName);
-      const goToProfile = () => {
-        if (writerId) {
-          navigation.navigate('Profile', { userId: writerId });
-        } else {
-          Alert.alert('⚠️ 사용자 정보 없음', '작성자 정보를 찾을 수 없습니다.');
-        }
-      };
+  console.log('📍 post.locationName =', post.locationName);
+  const goToProfile = () => {
+    if (writerId) {
+      navigation.navigate('Profile', { userId: writerId });
+    } else {
+      Alert.alert('⚠️ 사용자 정보 없음', '작성자 정보를 찾을 수 없습니다.');
+    }
+  };
 
   console.log('🖼 작성자 profileImage:', post.writer?.profileImage);
 
@@ -66,17 +66,18 @@ export default function PostCard({ post, currentUser, onDelete, onEdit }: Props)
       }
     }
   };
+  console.log('🧪 참가자 수 확인:', post.participantCount, '/', post.maxParticipants);
 
   return (
     <View style={styles.card}>
       <Text style={styles.category}>🏷️ {post.category}</Text>
+
+      {/* 작성자 */}
       <View style={styles.writerRow}>
         <TouchableOpacity onPress={goToProfile} style={styles.writerProfile}>
           <Image
             source={
-              typeof post.writer === 'object' &&
-                post.writer?.profileImage &&
-                post.writer.profileImage.trim() !== ''
+              typeof post.writer === 'object' && post.writer?.profileImage
                 ? { uri: post.writer.profileImage }
                 : require('../assets/user.png')
             }
@@ -85,19 +86,50 @@ export default function PostCard({ post, currentUser, onDelete, onEdit }: Props)
           <Text style={styles.writer}>{writerNickname}</Text>
         </TouchableOpacity>
       </View>
-       <Text style={styles.label}>장소: {post.locationName}</Text>
+
+      {/* 제목 */}
+      <Text style={styles.title}>{post.content}</Text>
+
+      {/* 장소 */}
+      <Text style={styles.label}>장소: {post.locationName}</Text>
+
+      {/* 시간 */}
       <Text style={styles.label}>시간: {post.time}</Text>
-      <Text style={styles.label}>설명: {post.detail}</Text>
+
+      {/* 선호 연령대 */}
+      {post.preferredAgeGroups && post.preferredAgeGroups.length > 0 && (
+        <View style={styles.ageGroupRow}>
+          <Text style={styles.label}>선호 연령대:</Text>
+          <View style={styles.ageButtons}>
+            {post.preferredAgeGroups.map((age, idx) => (
+              <View key={idx} style={styles.ageTag}>
+                <Text style={styles.ageTagText}>{age}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* 참여자 수 + 댓글 */}
       <Text style={styles.participants}>
-        참여자 수: {post.participants} / {post.maxParticipants}
+        참여자 수: {post.participantCount ?? 0} / {post.maxParticipants ?? 0}
+        <FontAwesome name="comment-o" size={14} color="#555" /> {post.commentCount || 0}
       </Text>
 
+      {/* 참가 신청 버튼 */}
       {!isOwner && (
-        <TouchableOpacity style={styles.applyButton} onPress={handleApply}>
-          <Text style={styles.buttonText}>참가 신청</Text>
+        <TouchableOpacity
+          style={[styles.applyButton, post.isFull && { backgroundColor: '#ccc' }]}
+          onPress={handleApply}
+          disabled={post.isFull}
+        >
+          <Text style={styles.buttonText}>
+            {post.isFull ? '모집마감' : '참가 신청'}
+          </Text>
         </TouchableOpacity>
       )}
 
+      {/* 수정/삭제 버튼 */}
       {isOwner && (
         <View style={styles.buttonContainer}>
           <TouchableOpacity onPress={onEdit} style={styles.editButton}>
@@ -118,20 +150,8 @@ export default function PostCard({ post, currentUser, onDelete, onEdit }: Props)
           <Text style={styles.manageText}>신청자 관리</Text>
         </TouchableOpacity>
       )}
-      {/* 댓글 접기/펼치기 버튼 */}
-      <TouchableOpacity onPress={() => setShowComments(prev => !prev)} style={{ marginTop: 10 }}>
-        <Text style={{ color: '#007AFF', fontWeight: 'bold' }}>
-          {showComments ? '댓글 접기 ▲' : '댓글 보기 ▼'}
-        </Text>
-      </TouchableOpacity>
-
-      {/* 댓글 섹션 */}
-      {showComments && (
-        <CommentSection
-          postId={post._id}
-        />
-      )}
     </View>
+
   );
 }
 
@@ -222,5 +242,46 @@ const styles = StyleSheet.create({
     marginRight: 8,
     backgroundColor: '#eee',
   },
+  detailButton: {
+    marginTop: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#E8F0FE',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    alignItems: 'center',
+  },
+  detailButtonText: { color: '#007AFF', fontWeight: 'bold' },
+  title: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginVertical: 6,
+    color: '#000',
+  },
+  ageGroupRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  ageButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginLeft: 6,
+  },
+  ageTag: {
+    backgroundColor: '#E8F0FE',
+    borderRadius: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    marginRight: 6,
+    marginTop: 4,
+  },
+  ageTagText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#007AFF',
+  },
+
 
 });

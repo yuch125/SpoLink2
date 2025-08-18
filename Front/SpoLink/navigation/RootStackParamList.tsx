@@ -11,68 +11,29 @@ export type KakaoPlace = {
   distance?: string;
 };
 
-export type RootStackParamList = {
-  ChatRoom: {
-    roomId: string;
-    userId: string;
+// 글 타입(다른 파일에서 쓰이면 여기 둬도 됨)
+export type Post = {
+  _id: string;
+  category: string;
+  content: string;
+  time: string;
+  location: { coordinates: [number, number] };
+  detail: string;
+  writer: {
+    _id: string;
     nickname: string;
+    userId?: string;
+    profileImage?: string;
   };
-  ChatList: { userId: string; nickname: string };
-  PostDetail: {
-    postId: string;
-    title: string;
-    content: string;
-    writerId: string;
-    writerNickname: string;
-    userId: string;
-    nickname: string;
-  };
-  Login: undefined;
-  Home: { userId: string, nickname: string; };
-  CreatePost: {
-    userId: string;
-    nickname?: string;
-    selectedPlace?: {
-      name: string;
-      latitude: number;
-      longitude: number;
-    };
-    prevData?: {
-      category?: string;
-      content?: string;
-      time?: string;
-      detail?: string;
-    };
-  };
-  Applications: { userId?: string, postId?: string, nickname?: string, };
-  MyApplicationList: { userId: string };
-  MyProfile: { userId: string };
-  Profile: { userId: string }
-  PlaceSearch: {
-    from: 'CreatePost' | 'EditPost';
-    prevData?: {
-      category?: string;
-      content?: string;
-      time?: string;
-      detail?: string;
-    };
-    post?: Post;
-    userId: string;
-    nickname: string;
-  };
-  EditPost: {
-    post: Post;
-    userId: string;
-    nickname: string;
-    selectedPlace?: {
-      name: string;
-      latitude: number;
-      longitude: number;
-    };
-  };
-  Chat: undefined;
-  PlaceDetail: { place: KakaoPlace };
-  NicknameSetup: { userId: string; token: string; loginId: string; };
+  locationName: string;
+  participants: number;
+  participantCount?: number;
+  maxParticipants?: number;
+  isFull?: boolean;
+  expiresAt: string;
+  commentCount?: number;
+  preferredAgeGroups?: string[];   // ✅ 배열로 수정
+
 };
 
 export interface UserProfile {
@@ -82,25 +43,68 @@ export interface UserProfile {
   profileImage?: string;
 }
 
+// ✅ “필수만” 강제, 나머지는 옵션으로 둬서 기존 호출들이 최대한 안 깨지게 정리
+export type RootStackParamList = {
+  // 인증
+  Login: undefined;
+  NicknameSetup: { userId: string; token: string; loginId: string };
 
-export type Post = {
-  _id: string;
-  category: string;
-  content: string;
-  time: string;
-  location: { coordinates: [number, number] }; detail: string;
-  writer: {
-    _id: string;
-    nickname: string;
-    userId?: string;
-    profileImage?: string;
+  // 메인/채팅 목록: 프로필 컨텍스트로 유저 데이터 접근 → 파라미터는 있어도 되고 없어도 되게
+  Home: { userId?: string; nickname?: string };
+  ChatList: { userId?: string; nickname?: string };
+
+  // 채팅방: roomId만 필수, 나머지는 있으면 사용
+  ChatRoom: {
+    roomId: string;
+    postId?: string;
+    title?: string;
+    initialCount?: number;
+    maxParticipants?: number;
+    userId?: string;     // (옵션) 삭제 UX용으로 넘길 수 있음
+    nickname?: string;   // (옵션) 필요 시 넘겨도 됨
   };
-  locationName :  string;
-  participants: number;
-  maxParticipants: number;
-  expiresAt: string;
+
+  // 글 상세: postId만 필수, 과거 호출 호환 위해 나머지는 옵션
+  PostDetail: {
+    postId: string;
+    title?: string;
+    content?: string;
+    writerId?: string;
+    writerNickname?: string;
+    userId?: string;
+    nickname?: string;
+  };
+
+  // 글 작성/수정/장소검색: 과거 호출 호환 위해 userId/nickname 옵션
+  CreatePost: {
+    userId?: string;
+    nickname?: string;
+    selectedPlace?: { name: string; latitude: number; longitude: number };
+    prevData?: { category?: string; content?: string; time?: string; detail?: string };
+  };
+  EditPost: {
+    post: Post;
+    userId?: string;
+    nickname?: string;
+    selectedPlace?: { name: string; latitude: number; longitude: number };
+  };
+  PlaceSearch: {
+    from: 'CreatePost' | 'EditPost';
+    prevData?: { category?: string; content?: string; time?: string; detail?: string };
+    post?: Post;
+    userId?: string;
+    nickname?: string;
+  };
+  PlaceDetail: { place: KakaoPlace };
+
+  // 신청 관련
+  Applications: { postId: string; userId?: string; nickname?: string };
+  MyApplicationList: { userId: string };
+
+  // 프로필
+  Profile: { userId: string };
+  MyProfile: { userId: string };
+
+  // (미사용이면 유지만)
+  Chat: undefined;
 };
-
-
-
-

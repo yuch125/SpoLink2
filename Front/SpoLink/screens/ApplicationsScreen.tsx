@@ -7,8 +7,8 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
- import { io, Socket } from 'socket.io-client';
 import axios from 'axios';
 import {
   useRoute,
@@ -29,25 +29,34 @@ type Application = {
   _id: string;
   status: 'pending' | 'accepted' | 'rejected';
   applicant: {
-    userId: string;
+
+    _id: string;
     nickname: string;
+    trustScore: number;
+    profileImage?: string;
+    ageGroup?: string;
   };
 };
+const getTrustLabel = (score: number) => {
+  if (score >= 80) return '매우높음';
+  if (score >= 60) return '높음';
+  if (score >= 40) return '보통';
+  if (score >= 20) return '낮음';
+  return '매우낮음';
+};
 
-// Socket.IO 클라이언트 인스턴스
-const socket = io(SERVER_URL, { transports: ['websocket'] });
 
 export default function ApplicationsScreen() {
   const route = useRoute<ApplicationsRouteProp>();
   const navigation = useNavigation<ApplicationsNavProp>();
   const { postId } = route.params;
   const { profile } = useProfile();
-  if (!profile) return <ActivityIndicator style={{flex:1}} size="large" />;
+  if (!profile) return <ActivityIndicator style={{ flex: 1 }} size="large" />;
+
   const { userId, nickname } = profile;
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
-  // 신청 목록 불러오기
   const fetchApplications = useCallback(async () => {
     setLoading(true);
     try {
@@ -69,44 +78,28 @@ export default function ApplicationsScreen() {
     }, [fetchApplications])
   );
 
-  // 소켓 연결
-  useEffect(() => {
-    socket.on('connect', () => {
-      console.log('✅ Socket.IO connected:', socket.id);
-    });
-    return () => {
-      socket.disconnect();
-    };
-  }, []);
 
-  // 참가 수락 핸들러
+
   const handleAccept = useCallback(
     async (
       id: string,
-      applicant: { userId: string; nickname: string }
+      applicant: { _id: string; nickname: string; trustScore: number }
     ) => {
       try {
-        // 1) 수락 & chatRoomId 받기
         const acceptRes = await axios.patch(
           `${SERVER_URL}/applications/${id}/accept`
         );
         const chatRoomId: string = acceptRes.data.chatRoomId;
-        console.log('▶️ 받은 chatRoomId:', chatRoomId);
 
-        // 2) Socket.IO 룸 입장
-        socket.emit('joinRoom', { roomId: chatRoomId, userId: applicant.userId });
-        console.log(
-          `▶️ joinRoom 이벤트 발송 (roomId=${chatRoomId}, userId=${
-            applicant.userId
-          })`
-        );
 
-        // 3) 채팅방 화면으로 이동
         navigation.navigate('ChatRoom', {
           roomId: chatRoomId,
-          userId,
-          nickname,
+          postId: acceptRes.data.postId,               // ✅ 헤더 보정용
+          title: acceptRes.data.title,                 // 모임 제목(없으면 ChatRoom이 /posts/:id로 보정)
+          initialCount: acceptRes.data.participantCount,
+          maxParticipants: acceptRes.data.maxParticipants,
         });
+
 
         Alert.alert('✅ 수락 완료', '채팅방으로 이동합니다.');
         fetchApplications();
@@ -121,7 +114,6 @@ export default function ApplicationsScreen() {
     [fetchApplications, navigation, userId, nickname]
   );
 
-  // 참가 거절 핸들러
   const handleReject = useCallback(
     async (id: string) => {
       try {
@@ -136,11 +128,40 @@ export default function ApplicationsScreen() {
     [fetchApplications]
   );
 
-  // 신청자 카드 렌더링
   const renderItem = useCallback(
     ({ item }: { item: Application }) => (
       <View style={styles.card}>
-        <Text style={styles.name}>{item.applicant.nickname}</Text>
+        <TouchableOpacity
+          style={styles.profileRow}
+          onPress={() => {
+            const id = item.applicant._id; // ✅ 이제 userId 대신 _id 사용
+            console.log('→ 프로필 이동 userId:', id);
+            if (typeof id === 'string' && id.length === 24) {
+              navigation.navigate('Profile', { userId: id });
+            } else {
+              Alert.alert('오류', '유효한 사용자 ID가 아닙니다.');
+            }
+          }}
+        >
+          <Image
+            source={
+              item.applicant.profileImage
+                ? { uri: `${item.applicant.profileImage}?t=${Date.now()}` }
+                : require('../assets/user.png')
+            }
+            style={styles.avatar}
+          />
+          <View style={styles.header}>
+            <Text style={styles.name}>{item.applicant.nickname}</Text>
+            <Text style={styles.trust}>
+              [{getTrustLabel(item.applicant.trustScore)}]
+            </Text>
+            {item.applicant.ageGroup && (
+              <Text style={styles.ageGroup}>({item.applicant.ageGroup})</Text>
+            )}
+          </View>
+        </TouchableOpacity>
+  
         <Text style={styles.status}>
           상태:{' '}
           {item.status === 'pending'
@@ -149,7 +170,7 @@ export default function ApplicationsScreen() {
             ? '✅ 수락됨'
             : '❌ 거절됨'}
         </Text>
-
+  
         {item.status === 'pending' && (
           <View style={styles.buttons}>
             <TouchableOpacity
@@ -164,9 +185,9 @@ export default function ApplicationsScreen() {
         )}
       </View>
     ),
-    [handleAccept, handleReject]
+    [handleAccept, handleReject, navigation]
   );
-
+  
   return (
     <View style={styles.container}>
       <Text style={styles.title}>신청자 목록</Text>
@@ -196,10 +217,16 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 10,
   },
+  profileRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  avatar: { width: 40, height: 40, borderRadius: 20, marginRight: 8 },
+  header: { flexDirection: 'row', alignItems: 'center' },
   name: { fontSize: 16, fontWeight: '600' },
-  status: { fontSize: 14, color: '#555', marginTop: 4 },
+  trust: { fontSize: 14, color: '#666', marginLeft: 8 },
+  status: { fontSize: 14, color: '#555', marginBottom: 6 },
   buttons: { flexDirection: 'row', marginTop: 10 },
   accept: { marginRight: 16, color: 'green', fontWeight: 'bold' },
   reject: { color: 'red', fontWeight: 'bold' },
   empty: { textAlign: 'center', marginTop: 40, color: '#888' },
+  age: { fontSize: 14, color: '#666', marginLeft: 8 },
+  ageGroup: { fontSize: 14, color: '#444', marginLeft: 6 },
 });
