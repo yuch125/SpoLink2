@@ -14,13 +14,14 @@ const userSchema = new mongoose.Schema(
     ageGroup: {
       type: String,
       enum: [
-        '중1','중2','중3',
-        '고1','고2','고3',
+        '중학생',
+        '고등학생',
         '대학생',
         '20대','30대','40대','50대 이상',
         '기타'
-      ],      default: '기타'
-    },
+      ],
+      default: '기타'
+    },    
 
     profileImage: {
       type: String, // 업로드된 이미지의 URL

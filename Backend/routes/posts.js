@@ -15,7 +15,19 @@ router.post('/', async (req, res) => {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 2 * 60 * 60 * 1000);
 
-    const { category, content, time, location, detail, writer, maxParticipants, locationName, preferredAgeGroups } = req.body;
+    const { 
+      category, 
+      content, 
+      startTime, 
+      endTime, 
+      location, 
+      detail, 
+      writer, 
+      maxParticipants, 
+      locationName,
+      preferredAgeGroups   // ✅ 추가
+    } = req.body;
+
     console.log('📍 locationName 도착:', locationName); // 🔍 여기
 
     if (!writer) {
@@ -32,7 +44,8 @@ router.post('/', async (req, res) => {
     const post = new Post({
       category,
       content,
-      time,
+      startTime,
+      endTime,
       location,
       locationName,
       detail,
@@ -58,7 +71,7 @@ router.post('/', async (req, res) => {
 
 // 모집 카드 전체 조회
 router.get('/', async (req, res) => {
-  const { lng, lat, writer } = req.query;
+  const { lng, lat, writer, userId } = req.query;
   try {
     // 1️⃣ 위치 기반 정렬 (GeoNear)
     if (lng && lat) {
@@ -104,6 +117,14 @@ router.get('/', async (req, res) => {
       const postsWithWriter = await Promise.all(
         postsWithComment.map(async (post) => {
           const user = await User.findById(post.writer).select('userId nickname profileImage');
+          let myApplicationStatus = null;
+          if (userId) {
+            const app = await Application.findOne({
+              post: post._id,
+              'applicant.userId': userId
+            }).lean();
+            if (app) myApplicationStatus = app.status;
+          }          
           return {
             ...post,
             writer: user
@@ -114,6 +135,7 @@ router.get('/', async (req, res) => {
                 profileImage: user.profileImage,
               }
               : post.writer, // 못 찾으면 원래 ObjectId 그대로
+              myApplicationStatus
           };
         })
       );
@@ -143,20 +165,17 @@ const postsEnriched = await Promise.all(
     const participantCount = 1 + acceptedCount; // 주최자 포함
     const isFull = post.maxParticipants ? participantCount >= post.maxParticipants : false;
     const commentCount = await Comment.countDocuments({ postId: post._id });
-
-    return { ...post, participantCount, isFull, commentCount };
+    let myApplicationStatus = null;
+    if (userId) {
+      const app = await Application.findOne({
+        post: post._id,
+        'applicant.userId': userId
+      }).lean();
+      if (app) myApplicationStatus = app.status;
+    }
+    return { ...post, participantCount, isFull, commentCount, myApplicationStatus};
   })
 );
-
-// (디버깅) 샘플 로그
-if (postsEnriched[0]) {
-  console.log('🔵 일반조회 샘플:', {
-    id: postsEnriched[0]._id,
-    participantCount: postsEnriched[0].participantCount,
-    max: postsEnriched[0].maxParticipants,
-    isFull: postsEnriched[0].isFull,
-  });
-}
 
 return res.json(postsEnriched);
 

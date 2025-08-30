@@ -32,8 +32,10 @@ export type Post = {
   isFull?: boolean;
   expiresAt: string;
   commentCount?: number;
-  preferredAgeGroups?: string[];   // ✅ 배열로 수정
-
+  preferredAgeGroups?: string[];   
+  myApplicationStatus?: 'pending' | 'accepted' | 'rejected' | null;
+  startTime: string;   
+  endTime: string;     
 };
 
 export interface UserProfile {
@@ -80,8 +82,15 @@ export type RootStackParamList = {
     userId?: string;
     nickname?: string;
     selectedPlace?: { name: string; latitude: number; longitude: number };
-    prevData?: { category?: string; content?: string; time?: string; detail?: string };
-  };
+    prevData?: {
+      category?: string;
+      content?: string;
+      date?: Date;
+      startTime?: Date;
+      endTime?: Date;
+      detail?: string;
+    };
+      };
   EditPost: {
     post: Post;
     userId?: string;
@@ -90,8 +99,16 @@ export type RootStackParamList = {
   };
   PlaceSearch: {
     from: 'CreatePost' | 'EditPost';
-    prevData?: { category?: string; content?: string; time?: string; detail?: string };
-    post?: Post;
+    prevData?: {
+      category?: string;
+      content?: string;
+      date?: Date | null;        // ✅ null 허용
+      startTime?: Date | null;   // ✅ null 허용
+      endTime?: Date | null;     // ✅ null 허용
+      detail?: string;
+    };
+    
+        post?: Post;
     userId?: string;
     nickname?: string;
   };

@@ -28,6 +28,16 @@ const roomMembers = new Map(); // 중복 카운트 방지
 io.on('connection', (socket) => {
   console.log('✅ 새 클라이언트 연결:', socket.id);
 
+  socket.on('register', ({ userId }) => {
+    if (!userId) return;
+    const room = `user:${userId}`;
+    socket.join(room);
+    console.log(`👤 User ${userId} registered to room ${room}`);
+  });
+  
+
+
+
   socket.on('joinRoom', ({ roomId, userId }) => {
     socket.join(roomId);
     console.log(`👥 ${userId}가 방(${roomId})에 입장함`);
@@ -183,7 +193,7 @@ app.get('/users', async (req, res) => {
 
 // [POST] /signup - 회원가입
 app.post('/signup', async (req, res) => {
-  const { username, password, nickname, profileImage, bio } = req.body;
+  const { username, password, nickname, profileImage, bio, ageGroup } = req.body;
 
   try {
     const existUser = await User.findOne({ username });
@@ -198,6 +208,7 @@ app.post('/signup', async (req, res) => {
       nickname: nickname || '',
       profileImage: profileImage || '',
       bio: bio || '',
+      ageGroup: ageGroup || null,   // ✅ 저장
     });
 
     res.json({ success: true, message: '회원가입 성공' });
@@ -238,6 +249,8 @@ app.post('/login', async (req, res) => {
       userId: user._id,
       username: user.username,
       nickname: user.nickname || '',
+      profileImage: user.profileImage || '',
+      ageGroup: user.ageGroup || null,   // ✅ 추가
     });
   } catch (err) {
     console.log('🚨 로그인 서버 오류:', err.message);

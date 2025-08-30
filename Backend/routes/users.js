@@ -8,6 +8,7 @@ const mongoose = require('mongoose');// 1) 사용자 정보 조회
 const ChatRoom = require('../models/ChatRoom'); // 모임 참가 통계용
 
 // ── 나이 숫자 → ageGroup 매핑
+const normalizeAgeGroup = require('../utils/normalizeAgeGroup');
 const ALLOWED_AGE_GROUPS = ['중1', '중2', '중3', '고1', '고2', '고3', '대학생', '기타'];
 function toAgeGroup(age) {
   const n = parseInt(age, 10);
@@ -128,9 +129,10 @@ router.patch('/:userId', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     // 닉네임 변경 제한 (최대 3회)
-     const nextNickname = (typeof newNickname === 'string') ? newNickname
-                        : (typeof nickname === 'string' ? nickname : undefined);
-     if (typeof nextNickname === 'string' && nextNickname !== user.nickname) {      if (user.nicknameChangeCount >= 3) {
+    const nextNickname = (typeof newNickname === 'string') ? newNickname
+      : (typeof nickname === 'string' ? nickname : undefined);
+    if (typeof nextNickname === 'string' && nextNickname !== user.nickname) {
+      if (user.nicknameChangeCount >= 3) {
         return res.status(400).json({ error: '닉네임은 최대 3회까지 변경 가능합니다.' });
       }
       user.nickname = nextNickname;
@@ -157,14 +159,12 @@ router.patch('/:userId', async (req, res) => {
     if (bio !== undefined) user.bio = bio;
     // 나이/나이그룹 처리
     if (ageGroup !== undefined) {
-      if (!ALLOWED_AGE_GROUPS.includes(ageGroup)) {
-        return res.status(400).json({ error: '허용되지 않는 ageGroup 값입니다.' });
-      }
-      user.ageGroup = ageGroup;
+      user.ageGroup = normalizeAgeGroup(ageGroup);
     } else if (age !== undefined) {
       const g = toAgeGroup(age);
-      if (g) user.ageGroup = g;
-    }    if (profileImage !== undefined) user.profileImage = profileImage; // ✅ 추가된 부분
+      if (g) user.ageGroup = normalizeAgeGroup(g);
+    }
+    if (profileImage !== undefined) user.profileImage = profileImage; // ✅ 추가된 부분
 
     await user.save();
     return res.json({ user });  // 수정 후 응답

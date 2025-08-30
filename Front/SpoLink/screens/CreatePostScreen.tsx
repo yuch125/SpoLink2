@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { ScrollView, KeyboardAvoidingView } from 'react-native';
 import {
   View,
   Text,
@@ -36,53 +37,72 @@ export default function CreatePostScreen() {
     navigation.navigate('Login');
     return null;
   }
+
+  // 상태 관리
   const [preferredAgeGroups, setPreferredAgeGroups] = useState<string[]>([]);
   const [category, setCategory] = useState('');
   const [content, setContent] = useState('');
-  const [locationName, setLocationName] = useState<string>('');                // 화면에 보여줄 텍스트
-  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);  // DB에 보낼 위·경도
+  const [locationName, setLocationName] = useState<string>('');
+  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   const [detail, setDetail] = useState('');
   const [expiresAt, setExpiresAt] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [maxParticipants, setMaxParticipants] = useState(12);
-  const [startTime, setStartTime] = useState<Date | null>(null);
-  const [endTime, setEndTime] = useState<Date | null>(null);
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [isSelectingStartTime, setIsSelectingStartTime] = useState(true);
+
+  // ✅ 날짜 + 시간
+  // 상태
+// ✅ 날짜 + 시간
+const [date, setDate] = useState<Date | null>(null);
+const [startTime, setStartTime] = useState<Date | null>(null);
+const [endTime, setEndTime] = useState<Date | null>(null);
+
+const [showPicker, setShowPicker] = useState(false);
+const [pickerMode, setPickerMode] = useState<'date' | 'time'>('date');
+const [pickerTarget, setPickerTarget] = useState<'date' | 'startTime' | 'endTime'>('date');
+
+// ✅ Picker 열기
+const openPicker = (target: 'date' | 'startTime' | 'endTime') => {
+  setPickerTarget(target);
+  setPickerMode(target === 'date' ? 'date' : 'time');
+  setShowPicker(true);
+};
+
+
+// ✅ Picker 값 변경
+const onChangeDateTime = (event: any, selected?: Date) => {
+  if (!selected) {
+    setShowPicker(false);
+    return;
+  }
+  if (pickerTarget === 'date') setDate(selected);
+  if (pickerTarget === 'startTime') setStartTime(selected);
+  if (pickerTarget === 'endTime') setEndTime(selected);
+  setShowPicker(false);
+};
+
 
   useEffect(() => {
-
     if (selectedPlace) {
       console.log('🧭 선택된 장소:', selectedPlace);
       const { name, latitude, longitude } = route.params.selectedPlace;
-      console.log('🗺️ 장소 이름:', name);
-      setLocationName(name);                          // UI 텍스트용
-      setCoordinates({ lat: latitude, lng: longitude });  // GeoJSON용
+      setLocationName(name);
+      setCoordinates({ lat: latitude, lng: longitude });
     }
   }, [route.params?.selectedPlace]);
 
-
+  // 연령대 선택
   const toggleAgeGroup = (age: string) => {
     if (preferredAgeGroups.includes(age)) {
-      // 이미 선택된 항목이면 제거
       setPreferredAgeGroups(preferredAgeGroups.filter(a => a !== age));
     } else {
       if (preferredAgeGroups.length < 2) {
         setPreferredAgeGroups([...preferredAgeGroups, age]);
       } else {
-        Alert.alert("최대 2개까지 선택할 수 있습니다.");
+        Alert.alert('최대 2개까지 선택할 수 있습니다.');
       }
     }
   };
 
-
-  const onChangeDate = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === 'ios');
-    if (selectedDate) {
-      setExpiresAt(selectedDate);
-    }
-  };
-
+  // 모집 카드 제출
   const handleSubmit = async () => {
     if (!category || !content || !startTime || !endTime || !coordinates || !detail) {
       Alert.alert('모든 항목을 입력해 주세요.');
@@ -94,18 +114,11 @@ export default function CreatePostScreen() {
       return;
     }
 
-    const time = `${startTime.toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-    })}~${endTime.toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-    })}`;
-
     const newPost = {
       category,
       content,
-      time,
+      startTime: startTime.toISOString(),  // ✅ 날짜+시간 저장
+      endTime: endTime.toISOString(),
       writer: userId,
       maxParticipants,
       participants: 1,
@@ -113,15 +126,14 @@ export default function CreatePostScreen() {
       locationName,
       location: {
         type: 'Point',
-        coordinates: coordinates
-          ? [coordinates.lng, coordinates.lat]
-          : [0, 0],  // 좌표가 없으면 기본값 (필요시 처리)
+        coordinates: coordinates ? [coordinates.lng, coordinates.lat] : [0, 0],
       },
       detail,
-      preferredAgeGroups,   // ✅ 추가
-
+      preferredAgeGroups,
     };
+
     console.log('🧾 생성 요청 데이터:', newPost);
+
     try {
       await axios.post(`${SERVER_URL}/posts`, newPost, {
         headers: { 'Content-Type': 'application/json' },
@@ -145,9 +157,18 @@ export default function CreatePostScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+    style={{ flex: 1 }}
+    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+  >
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ paddingBottom: 40 }} // 마지막 여백
+      keyboardShouldPersistTaps="handled"
+    >
       <Text style={styles.title}>모임을 만들어 주세요</Text>
 
+      {/* 운동 종목 */}
       <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8 }}>운동 종목 선택</Text>
       <View style={styles.sportButtonContainer}>
         {['농구', '축구', '배드민턴', '런닝'].map((sport) => (
@@ -163,6 +184,7 @@ export default function CreatePostScreen() {
         ))}
       </View>
 
+      {/* 제목 */}
       <TextInput
         placeholder="제목"
         style={styles.input}
@@ -170,39 +192,44 @@ export default function CreatePostScreen() {
         onChangeText={setContent}
       />
 
-      <View style={[styles.input, { flexDirection: 'row', justifyContent: 'space-between' }]}>
-        <TouchableOpacity onPress={() => { setIsSelectingStartTime(true); setShowTimePicker(true); }}>
-          <Text style={styles.timeText}>
-            {startTime ? startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '시작 시간'}
-          </Text>
-        </TouchableOpacity>
-        <Text> ~ </Text>
-        <TouchableOpacity onPress={() => { setIsSelectingStartTime(false); setShowTimePicker(true); }}>
-          <Text style={styles.timeText}>
-            {endTime ? endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '종료 시간'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+{/* 날짜 선택 */}
+<TouchableOpacity style={styles.input} onPress={() => openPicker('date')}>
+  <Text style={styles.timeText}>
+    {date ? date.toLocaleDateString() : '날짜 선택'}
+  </Text>
+</TouchableOpacity>
 
-      {showTimePicker && (
+{/* 시작/종료 시간 */}
+<View style={[styles.input, { flexDirection: 'row', justifyContent: 'space-between' }]}>
+  <TouchableOpacity onPress={() => openPicker('startTime')}>
+    <Text style={styles.timeText}>
+      {startTime ? startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '시작 시간'}
+    </Text>
+  </TouchableOpacity>
+  <Text> ~ </Text>
+  <TouchableOpacity onPress={() => openPicker('endTime')}>
+    <Text style={styles.timeText}>
+      {endTime ? endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '종료 시간'}
+    </Text>
+  </TouchableOpacity>
+</View>
+
+
+      {/* Picker */}
+      {showPicker && (
         <DateTimePicker
-          mode="time"
-          value={(isSelectingStartTime ? startTime : endTime) || new Date()}
-          is24Hour={true}
-          display={Platform.OS === 'android' ? 'spinner' : 'default'}
-          onChange={(event, date) => {
-            setShowTimePicker(false);
-            if (date) {
-              isSelectingStartTime ? setStartTime(date) : setEndTime(date);
-            }
-          }}
+          mode={pickerMode}
+          value={new Date()}
+          display={pickerMode === 'date' ? 'calendar' : 'spinner'}
+          onChange={onChangeDateTime}
         />
       )}
 
+
+      {/* 장소 */}
       <TouchableOpacity
         style={[styles.input, styles.locationBox]}
         onPress={() => {
-          console.log('📍 장소 선택 이동 시도:', userId, nickname);
           navigation.navigate('PlaceSearch', {
             from: 'CreatePost',
             userId,
@@ -216,22 +243,22 @@ export default function CreatePostScreen() {
         </Text>
       </TouchableOpacity>
 
+      {/* 세부사항 */}
       <TextInput
-        placeholder="세부사항 (예:준비물 : 농구화)"
+        placeholder="세부사항 (예: 준비물: 농구화)"
         style={styles.input}
+        multiline  // ✅ 줄바꿈 가능
         value={detail}
         onChangeText={setDetail}
       />
 
+      {/* 선호 연령대 */}
       <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8 }}>선호 연령대 (최대 2개)</Text>
       <View style={styles.ageContainer}>
         {["중학생", "고등학생", "20대", "30대", "40대", "50대", "상관없음"].map(age => (
           <TouchableOpacity
             key={age}
-            style={[
-              styles.ageButton,
-              preferredAgeGroups.includes(age) && styles.ageButtonSelected
-            ]}
+            style={[styles.ageButton, preferredAgeGroups.includes(age) && styles.ageButtonSelected]}
             onPress={() => toggleAgeGroup(age)}
           >
             <Text style={preferredAgeGroups.includes(age) ? styles.ageTextSelected : styles.ageText}>
@@ -241,17 +268,7 @@ export default function CreatePostScreen() {
         ))}
       </View>
 
-
-
-      {showDatePicker && (
-        <DateTimePicker
-          value={expiresAt}
-          mode="datetime"
-          display="default"
-          onChange={onChangeDate}
-        />
-      )}
-
+      {/* 최대 참가자 수 */}
       <View style={styles.inputContainer}>
         <Text>최대 참가자 수:</Text>
         <TextInput
@@ -262,11 +279,13 @@ export default function CreatePostScreen() {
         />
       </View>
 
+      {/* 제출 버튼 */}
       <TouchableOpacity style={styles.button} onPress={handleSubmit}>
         <Text style={styles.buttonText}>모임 만들기</Text>
       </TouchableOpacity>
-    </View>
-  );
+      </ScrollView>
+  </KeyboardAvoidingView>
+);
 }
 
 const styles = StyleSheet.create({
@@ -280,14 +299,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontSize: 16,
   },
-  locationBox: {
-    justifyContent: 'center',
-    height: 48,
-  },
-  datePickerBox: {
-    justifyContent: 'center',
-    height: 48,
-  },
+  locationBox: { justifyContent: 'center', height: 48 },
   sportButtonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -301,16 +313,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#eee',
     alignItems: 'center',
   },
-  sportButtonSelected: {
-    backgroundColor: '#007AFF',
-  },
-  sportText: {
-    color: '#000',
-  },
-  sportTextSelected: {
-    color: '#fff',
-    fontWeight: '600',
-  },
+  sportButtonSelected: { backgroundColor: '#007AFF' },
+  sportText: { color: '#000' },
+  sportTextSelected: { color: '#fff', fontWeight: '600' },
   button: {
     backgroundColor: '#007AFF',
     padding: 15,
@@ -319,9 +324,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   buttonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
-  inputContainer: {
-    marginBottom: 12,
-  },
+  inputContainer: { marginBottom: 12 },
   textInput: {
     borderWidth: 1,
     borderColor: '#ccc',
@@ -329,15 +332,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     fontSize: 16,
   },
-  timeText: {
-    fontSize: 16,
-    color: '#000',
-  },
-  ageContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 12,
-  },
+  timeText: { fontSize: 16, color: '#000' },
+  ageContainer: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12 },
   ageButton: {
     paddingVertical: 8,
     paddingHorizontal: 12,
@@ -347,16 +343,7 @@ const styles = StyleSheet.create({
     margin: 4,
     backgroundColor: '#f2f2f2',
   },
-  ageButtonSelected: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  ageText: {
-    color: '#000',
-  },
-  ageTextSelected: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  
+  ageButtonSelected: { backgroundColor: '#007AFF', borderColor: '#007AFF' },
+  ageText: { color: '#000' },
+  ageTextSelected: { color: '#fff', fontWeight: '600' },
 });

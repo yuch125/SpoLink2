@@ -15,13 +15,24 @@ type Props = {
   currentUser: string; // userId
   onDelete?: () => void;
   onEdit?: () => void;
+
 };
 
 export default function PostCard({ post, currentUser, onDelete, onEdit }: Props) {
   const [showComments, setShowComments] = useState(false);
   const { profile } = useProfile();
   const nickname = profile?.nickname || '익명';
+  const start = new Date(post.startTime);
+  const end = new Date(post.endTime);
 
+  // ✅ 날짜/시간 포맷
+  const dateStr = start.toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  const timeStr = `${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ~ ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const writerId =
@@ -34,6 +45,18 @@ export default function PostCard({ post, currentUser, onDelete, onEdit }: Props)
       ? post.writer.nickname
       : '익명';
   console.log('📍 post.locationName =', post.locationName);
+
+  // 현재 로그인한 유저 ageGroup
+  const userAgeGroup = profile?.ageGroup || null;
+
+  // 모집글의 허용 연령대
+  const allowedAgeGroups = post.preferredAgeGroups || [];
+
+  // 신청 가능 여부 계산
+  const isAgeAllowed =
+    allowedAgeGroups.includes('상관없음') ||
+    (userAgeGroup && allowedAgeGroups.includes(userAgeGroup));
+
   const goToProfile = () => {
     if (writerId) {
       navigation.navigate('Profile', { userId: writerId });
@@ -67,7 +90,9 @@ export default function PostCard({ post, currentUser, onDelete, onEdit }: Props)
     }
   };
   console.log('🧪 참가자 수 확인:', post.participantCount, '/', post.maxParticipants);
-
+  console.log('👤 현재 유저 ageGroup:', userAgeGroup);
+  console.log('📦 모집글 허용 ageGroups:', allowedAgeGroups);
+  
   return (
     <View style={styles.card}>
       <Text style={styles.category}>🏷️ {post.category}</Text>
@@ -91,10 +116,12 @@ export default function PostCard({ post, currentUser, onDelete, onEdit }: Props)
       <Text style={styles.title}>{post.content}</Text>
 
       {/* 장소 */}
-      <Text style={styles.label}>장소: {post.locationName}</Text>
+      <Text style={styles.datetime}>시간: {dateStr} {timeStr}</Text>
 
-      {/* 시간 */}
-      <Text style={styles.label}>시간: {post.time}</Text>
+      {/* 장소 */}
+      {post.locationName && (
+        <Text style={styles.location}>장소: {post.locationName}</Text>
+      )}
 
       {/* 선호 연령대 */}
       {post.preferredAgeGroups && post.preferredAgeGroups.length > 0 && (
@@ -118,16 +145,47 @@ export default function PostCard({ post, currentUser, onDelete, onEdit }: Props)
 
       {/* 참가 신청 버튼 */}
       {!isOwner && (
-        <TouchableOpacity
-          style={[styles.applyButton, post.isFull && { backgroundColor: '#ccc' }]}
-          onPress={handleApply}
-          disabled={post.isFull}
-        >
-          <Text style={styles.buttonText}>
-            {post.isFull ? '모집마감' : '참가 신청'}
-          </Text>
-        </TouchableOpacity>
+        <>
+          {post.myApplicationStatus === 'pending' && (
+            <Text style={{ marginTop: 8, color: '#666', fontWeight: 'bold' }}>
+              이미 참가신청한 모집입니다
+            </Text>
+          )}
+          {post.myApplicationStatus === 'accepted' && (
+            <Text style={[styles.applyButton, { backgroundColor: '#ccc' }]}>
+              참가신청이 수락되었습니다
+            </Text>
+          )}
+          {post.myApplicationStatus === 'rejected' && (
+            <Text style={[styles.applyButton, { backgroundColor: '#ccc' }]}>
+              참가신청이 거절되었습니다
+            </Text>
+          )}
+
+          {!post.myApplicationStatus && (
+            <>
+              {post.isFull ? (
+                <Text style={[styles.applyButton, { backgroundColor: '#ccc' }]}>
+                  모집마감
+                </Text>
+              ) : !isAgeAllowed ? (
+                <Text style={[styles.applyButton, { backgroundColor: '#ccc' }]}>
+                  이 모집글은 {allowedAgeGroups.join(', ')}만 참가 가능합니다
+                </Text>
+              ) : (
+                <TouchableOpacity
+                  style={styles.applyButton}
+                  onPress={handleApply}
+                >
+                  <Text style={styles.buttonText}>참가 신청</Text>
+                </TouchableOpacity>
+              )}
+            </>
+          )}
+        </>
       )}
+
+
 
       {/* 수정/삭제 버튼 */}
       {isOwner && (
@@ -178,6 +236,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 6,
   },
+  datetime: { fontSize: 14, color: '#333', marginBottom: 6 },
+
   label: {
     fontSize: 14,
     color: '#444',
@@ -282,6 +342,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#007AFF',
   },
+  location: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 6,
+  },
+  
 
 
 });

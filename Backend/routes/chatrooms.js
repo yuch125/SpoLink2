@@ -99,8 +99,9 @@ router.get('/:roomId/participants', async (req, res) => {
   try {
     const { roomId } = req.params;
 
-    const room = await ChatRoom.findById(roomId).lean();
-    if (!room) return res.status(404).json({ error: '채팅방 없음' });
+    const room = await ChatRoom.findById(roomId)
+    .populate('postId', 'maxParticipants') // 👈 모집글 정원 정보까지 가져오기
+    .lean();    if (!room) return res.status(404).json({ error: '채팅방 없음' });
 
     const raw = Array.isArray(room.participants) ? room.participants : [];
 

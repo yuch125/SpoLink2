@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import {
   View,
   Text,
@@ -18,22 +19,42 @@ type EditPostRouteProp = RouteProp<RootStackParamList, 'EditPost'>;
 type EditPostNavProp = NativeStackNavigationProp<RootStackParamList, 'EditPost'>;
 
 export default function EditPostScreen() {
+
   const route = useRoute<EditPostRouteProp>();
   const navigation = useNavigation<EditPostNavProp>();
   const { post, userId, nickname } = route.params;
-
+  const [date, setDate] = useState<Date | null>(new Date(post.startTime));
+  const [startTime, setStartTime] = useState<Date | null>(new Date(post.startTime));
+  const [endTime, setEndTime] = useState<Date | null>(new Date(post.endTime));
   const [category, setCategory] = useState(post.category);
   const [content, setContent] = useState(post.content);
-  const [time, setTime] = useState(post.time);
   const [location, setLocation] = useState<{
     name: string;
     latitude: number;
     longitude: number;
   } | null>(null);
   const [locationName, setLocationName] = useState<string>(''); // ✅ 이 줄 추가
-
   const [detail, setDetail] = useState(post.detail);
-
+  const [showPicker, setShowPicker] = useState(false);
+  const [pickerMode, setPickerMode] = useState<'date' | 'time'>('date');
+  const [pickerTarget, setPickerTarget] = useState<'date' | 'startTime' | 'endTime'>('date');
+  
+  const openPicker = (target: 'date' | 'startTime' | 'endTime') => {
+    setPickerTarget(target);
+    setPickerMode(target === 'date' ? 'date' : 'time');
+    setShowPicker(true);
+  };
+  
+  const onChangeDateTime = (event: any, selected?: Date) => {
+    if (!selected) {
+      setShowPicker(false);
+      return;
+    }
+    if (pickerTarget === 'date') setDate(selected);
+    if (pickerTarget === 'startTime') setStartTime(selected);
+    if (pickerTarget === 'endTime') setEndTime(selected);
+    setShowPicker(false);
+  };
   // 🔄 장소 검색 후 돌아왔을 때 선택된 장소 반영
   useEffect(() => {
     if (post.location) {
@@ -64,13 +85,29 @@ export default function EditPostScreen() {
 
     return focusUnsubscribe;
   }, [navigation, route.params?.selectedPlace]);
+
+  const startDateTime = new Date(date!);
+startDateTime.setHours(startTime!.getHours(), startTime!.getMinutes());
+
+const endDateTime = new Date(date!);
+endDateTime.setHours(endTime!.getHours(), endTime!.getMinutes());
+
+
   const handleSave = async () => {
     try {
       const updated = {
-        category, content, time, location: location ? {
-          type: 'Point',
-          coordinates: [location.longitude, location.latitude], // 👈 이 구조로!
-        } : null, detail, locationName
+        category,
+        content,
+        startTime: startDateTime.toISOString(),  // ✅ 필수
+        endTime: endDateTime.toISOString(),      // ✅ 필수
+        location: location
+          ? {
+              type: 'Point',
+              coordinates: [location.longitude, location.latitude],
+            }
+          : null,
+        detail,
+        locationName,
       };
       await axios.put(`${SERVER_URL}/posts/${post._id}`, updated, {
         headers: { 'Content-Type': 'application/json' },
@@ -85,7 +122,7 @@ export default function EditPostScreen() {
           },
         },
       ]);
-      
+
     } catch (err) {
       console.error('❌ 수정 실패:', err);
       Alert.alert('수정 중 오류 발생');
@@ -120,12 +157,42 @@ export default function EditPostScreen() {
         onChangeText={setContent}
       />
 
-      <TextInput
-        style={styles.input}
-        placeholder="시간 (예: 18:00~20:00)"
-        value={time}
-        onChangeText={setTime}
-      />
+      {/* 날짜 선택 */}
+      <TouchableOpacity style={styles.input} onPress={() => openPicker('date')}>
+        <Text style={{ color: date ? '#000' : '#888' }}>
+          {date ? date.toLocaleDateString() : '날짜 선택'}
+        </Text>
+      </TouchableOpacity>
+
+      {/* 시작/종료 시간 */}
+      <View style={[styles.input, { flexDirection: 'row', justifyContent: 'space-between' }]}>
+        <TouchableOpacity onPress={() => openPicker('startTime')}>
+          <Text style={{ color: startTime ? '#000' : '#888' }}>
+            {startTime
+              ? startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              : '시작 시간'}
+          </Text>
+        </TouchableOpacity>
+        <Text> ~ </Text>
+        <TouchableOpacity onPress={() => openPicker('endTime')}>
+          <Text style={{ color: endTime ? '#000' : '#888' }}>
+            {endTime
+              ? endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              : '종료 시간'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Picker */}
+      {showPicker && (
+        <DateTimePicker
+          mode={pickerMode}
+          value={new Date()}
+          display={pickerMode === 'date' ? 'calendar' : 'spinner'}
+          onChange={onChangeDateTime}
+        />
+      )}
+
 
       {/* 🔍 장소 선택 버튼 */}
       <TouchableOpacity
@@ -136,7 +203,7 @@ export default function EditPostScreen() {
             userId,
             nickname,
             post,
-            prevData: { category, content, time, detail },
+            prevData: { category, content, date, startTime, endTime, detail },
           });
         }}
       >

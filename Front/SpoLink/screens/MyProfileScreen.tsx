@@ -204,16 +204,24 @@ export default function MyProfileScreen() {
             <TextInput style={styles.input} value={nickname} onChangeText={setNickname} placeholder="닉네임" />
             <TextInput style={styles.input} value={age} onChangeText={setAge} placeholder="예) 23" keyboardType="numeric" />
             <TextInput style={styles.input} value={bio} onChangeText={setBio} placeholder="한줄 소개" />
-            <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-              <Text style={styles.saveText}>저장</Text>
-            </TouchableOpacity>
+
+            {/* 저장/취소 버튼 묶음 */}
+            <View style={styles.editButtonsRow}>
+              <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
+                <Text style={styles.saveText}>저장</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setEditing(false)}>
+                <Text style={styles.cancelText}>취소</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ) : (
           <View style={styles.infoBlock}>
             <Text style={styles.nickname}>{nickname}</Text>
             <Text style={styles.intro}>{bio?.toString() || ''}</Text>
             <Text style={styles.trust}>
-            신뢰도: {getTrustLabel(trustScore)}
+              신뢰도: {getTrustLabel(trustScore)}
             </Text>
 
             <Text style={styles.intro}>나이: {age || '미입력'}</Text>
@@ -253,12 +261,18 @@ export default function MyProfileScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: '#fff' },
 
-  // 🔹 로그아웃 버튼
-  logoutBtn: { position: 'absolute', top: 12, right: 12, padding: 6, zIndex: 10 },
+  logoutBtn: {
+    position: 'absolute', top: 12, right: 12, padding: 6, zIndex: 10,
+  },
   logoutText: { fontSize: 12, color: '#007AFF', fontWeight: '600' },
 
-  // 🔹 프로필 섹션 (20%)
-  profileSection: { flex: 2, alignItems: 'center', justifyContent: 'center' },
+  // 🔹 프로필 섹션 (높이 비율 제거)
+  profileSection: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    marginBottom: 16,
+    backgroundColor: '#fff',
+  },
   avatar: { width: 70, height: 70, borderRadius: 35, marginBottom: 8 },
   infoBlock: { alignItems: 'center' },
   nickname: { fontSize: 18, fontWeight: 'bold' },
@@ -266,14 +280,41 @@ const styles = StyleSheet.create({
   trust: { fontSize: 11, color: '#888' },
   editText: { fontSize: 12, color: '#007AFF', marginTop: 4 },
 
-  editBlock: { width: '90%', paddingHorizontal: 16 },
+  editBlock: { width: '90%', paddingHorizontal: 16, marginTop: 12 },
   editNotice: { fontSize: 11, color: '#999', marginBottom: 8, textAlign: 'center' },
   input: { borderBottomWidth: 1, borderColor: '#ccc', fontSize: 13, marginBottom: 12, paddingVertical: 4 },
-  saveBtn: { backgroundColor: '#007AFF', padding: 8, borderRadius: 6, alignItems: 'center' },
-  saveText: { color: '#fff', fontSize: 13 },
 
-  // 🔹 모임 섹션 (80%)
-  listSection: { flex: 8 },
+
+  // 🔹 모임 섹션
+  listSection: {
+    flex: 1,
+  },
   sectionTitle: { fontSize: 16, fontWeight: '600', marginTop: 12, marginBottom: 6 },
   emptyText: { textAlign: 'center', color: '#666', marginVertical: 12 },
+  editButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+
+  saveBtn: {
+    backgroundColor: '#007AFF',
+    padding: 8,
+    borderRadius: 6,
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 4,
+  },
+  saveText: { color: '#fff', fontSize: 13 },
+
+  cancelBtn: {
+    backgroundColor: '#ccc',
+    padding: 8,
+    borderRadius: 6,
+    alignItems: 'center',
+    flex: 1,
+    marginLeft: 4,
+  },
+  cancelText: { color: '#333', fontSize: 13 },
+
 });

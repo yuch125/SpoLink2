@@ -203,6 +203,21 @@ router.patch('/:id/accept', async (req, res) => {
         maxParticipants: post.maxParticipants,
         isFull: post.isFull,
       });
+
+      console.log("📢 emit to user:", `user:${String(application.applicant.userId)}`, {
+        postId: String(post._id),
+        status: 'accepted',
+        title: post.content,
+      });
+      // ✅ 신청자 개인에게 알림 이벤트 전송
+      ioRef?.to(`user:${String(application.applicant.userId)}`).emit('application:update', {
+        postId: String(post._id),
+        status: 'accepted',
+        title: post.content,
+      });
+
+
+
     }
 
     // [A-4] 응답을 풍부하게 (클라에서 헤더 초기 세팅에 사용)
@@ -244,7 +259,17 @@ router.patch('/:id/reject', async (req, res) => {
     await post.save();
 
     emitParticipantsUpdated(post, participantCount, isFull);
-
+    console.log("📢 emit to user:", `user:${String(application.applicant.userId)}`, {
+      postId: String(post._id),
+      status: 'rejected',
+      title: post.content,
+    });
+    ioRef?.to(`user:${String(application.applicant.userId)}`).emit('application:update', {
+      postId: String(post._id),
+      status: 'rejected',
+      title: post.content,
+    });
+    
     return res.json({
       success: true,
       postId: String(post._id),

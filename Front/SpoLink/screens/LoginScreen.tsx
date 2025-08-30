@@ -9,7 +9,7 @@ import { SERVER_URL } from '../constants';
 import axios from 'axios';
 import { useProfile } from '../contexts/ProfileContext';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
-
+import socket from '../utils/socket';
 export default function LoginScreen() {
   const { setProfile } = useProfile(); // 추가
   const navigation = useNavigation<NavigationProp>();
@@ -24,25 +24,28 @@ export default function LoginScreen() {
       Alert.alert('입력 오류', '아이디와 비밀번호를 입력해주세요.');
       return;
     }
-
+  
     try {
       const res = await axios.post(`${SERVER_URL}/login`, {
         username: userIdInput.trim(),
         password: password.trim(),
       });
-      const loginData = res.data; // ✅ 여기에 선언돼야 함
       const data = res.data;
-      console.log('✅ 로그인 응답 데이터:', data); // ✅ 여기에 로그 추가
-
+      console.log('✅ 로그인 응답 데이터:', data);
+  
       if (data.success) {
         setProfile({
           userId: data.userId,
           nickname: data.nickname || '',
         });
+  
+        // ✅ 로그인 성공 → 소켓 register 먼저!
+        socket.emit('register', { userId: data.userId });
+  
         Alert.alert('환영합니다!', `${data.nickname}님, 로그인 성공!`);
         setUserIdInput('');
         setPassword('');
-
+  
         if (!data.nickname || data.nickname.trim() === '') {
           navigation.navigate('NicknameSetup', {
             userId: data.userId,
@@ -51,8 +54,8 @@ export default function LoginScreen() {
           });
         } else {
           navigation.navigate('Home', {
-            userId: loginData.userId,
-            nickname: loginData.nickname
+            userId: data.userId,
+            nickname: data.nickname,
           });
         }
       } else {

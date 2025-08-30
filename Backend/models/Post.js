@@ -8,7 +8,6 @@ const postSchema = new Schema({
   writerProfileImage: { type: String },
   category: { type: String, required: true },
   content: { type: String, required: true },
-  time: String,
   location: {
     type: { type: String, enum: ['Point'], default: 'Point' },
     coordinates: { type: [Number], required: true }, // [경도, 위도]
@@ -37,7 +36,8 @@ const postSchema = new Schema({
       message: '선호 연령대는 최대 2개까지 선택 가능합니다.',
     },
   },
-
+  startTime: { type: Date, required: true },
+  endTime: { type: Date, required: true },
   isFull: { type: Boolean, default: false },       // ✅ Real field로 유지
   expiresAt: Date
 }, {
