@@ -11,6 +11,13 @@ export type KakaoPlace = {
   distance?: string;
 };
 
+export type Participant = {
+  userId: string;
+  nickname: string;
+  profileImage?: string;
+  trustScore?: number;
+  ageGroup?: string;
+};
 // 글 타입(다른 파일에서 쓰이면 여기 둬도 됨)
 export type Post = {
   _id: string;
@@ -26,16 +33,16 @@ export type Post = {
     profileImage?: string;
   };
   locationName: string;
-  participants: number;
+  participants: Participant[];   // ✅ 배열로 고치기
   participantCount?: number;
   maxParticipants?: number;
   isFull?: boolean;
   expiresAt: string;
   commentCount?: number;
-  preferredAgeGroups?: string[];   
+  preferredAgeGroups?: string[];
   myApplicationStatus?: 'pending' | 'accepted' | 'rejected' | null;
-  startTime: string;   
-  endTime: string;     
+  startTime: string;
+  endTime: string;
 };
 
 export interface UserProfile {
@@ -90,7 +97,7 @@ export type RootStackParamList = {
       endTime?: Date;
       detail?: string;
     };
-      };
+  };
   EditPost: {
     post: Post;
     userId?: string;
@@ -107,8 +114,8 @@ export type RootStackParamList = {
       endTime?: Date | null;     // ✅ null 허용
       detail?: string;
     };
-    
-        post?: Post;
+
+    post?: Post;
     userId?: string;
     nickname?: string;
   };
@@ -117,7 +124,8 @@ export type RootStackParamList = {
   // 신청 관련
   Applications: { postId: string; userId?: string; nickname?: string };
   MyApplicationList: { userId: string };
-
+  CreatedPosts: { userId: string };   // ✅ 추가
+  JoinedPosts: { userId: string };    // ✅ 추가
   // 프로필
   Profile: { userId: string };
   MyProfile: { userId: string };

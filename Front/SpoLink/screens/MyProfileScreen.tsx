@@ -219,11 +219,7 @@ export default function MyProfileScreen() {
         ) : (
           <View style={styles.infoBlock}>
             <Text style={styles.nickname}>{nickname}</Text>
-            <Text style={styles.intro}>{bio?.toString() || ''}</Text>
-            <Text style={styles.trust}>
-              신뢰도: {getTrustLabel(trustScore)}
-            </Text>
-
+            <Text style={styles.intro}>한줄소개 : {bio?.trim() || '한줄 소개가 없습니다.'}</Text>   {/* ✅ 수정 */}
             <Text style={styles.intro}>나이: {age || '미입력'}</Text>
             <TouchableOpacity onPress={() => setEditing(true)}>
               <Text style={styles.editText}>✏️ 프로필 수정</Text>
@@ -232,28 +228,23 @@ export default function MyProfileScreen() {
         )}
       </View>
 
-      {/* 모임 리스트 (80%) */}
+      {/* 모임 리스트 대신 버튼으로 */}
       <View style={styles.listSection}>
-        <Text style={styles.sectionTitle}>내가 만든 모임</Text>
-        <FlatList
-          data={createdPosts}
-          keyExtractor={item => item._id}
-          renderItem={({ item }) => (
-            <PostCard post={item} currentUser={profile!.userId} onDelete={() => handleDelete(item._id)} onEdit={() => handleEdit(item)} />
-          )}
-          ListEmptyComponent={<Text style={styles.emptyText}>생성한 모임이 없습니다.</Text>}
-        />
+        <TouchableOpacity
+          style={styles.menuButton}
+          onPress={() => navigation.navigate('CreatedPosts', { userId })}
+        >
+          <Text style={styles.menuButtonText}>만든 모임 보기</Text>
+        </TouchableOpacity>
 
-        <Text style={styles.sectionTitle}>내가 참가한 모임</Text>
-        <FlatList
-          data={joinedPosts}
-          keyExtractor={item => item._id}
-          renderItem={({ item }) => (
-            <PostCard post={item} currentUser={profile!.userId} onDelete={() => handleDelete(item._id)} onEdit={() => handleEdit(item)} />
-          )}
-          ListEmptyComponent={<Text style={styles.emptyText}>참가한 모임이 없습니다.</Text>}
-        />
+        <TouchableOpacity
+          style={styles.menuButton}
+          onPress={() => navigation.navigate('JoinedPosts', { userId })}
+        >
+          <Text style={styles.menuButtonText}>참가한 모임 보기</Text>
+        </TouchableOpacity>
       </View>
+
     </View>
   );
 }
@@ -316,5 +307,18 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   cancelText: { color: '#333', fontSize: 13 },
+  menuButton: {
+    backgroundColor: '#007AFF',
+    padding: 12,
+    borderRadius: 8,
+    marginVertical: 6,
+    alignItems: 'center',
+  },
+  menuButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  
 
 });

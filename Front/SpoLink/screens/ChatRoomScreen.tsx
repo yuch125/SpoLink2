@@ -49,6 +49,7 @@ export default function ChatRoomScreen() {
   const navigation = useNavigation<any>();
   const [evaluatedMap, setEvaluatedMap] = useState<Record<string, boolean>>({});
   const [roomTitle, setRoomTitle] = useState<string>(title ?? '모임');
+
   const [participantCount, setParticipantCount] = useState<number>(initialCount ?? 1);
   const [maxParticipants, setMaxParticipants] = useState<number>(initialMax ?? 1);
 
@@ -77,7 +78,7 @@ export default function ChatRoomScreen() {
       headerTitle: `${roomTitle}  ${participantCount}/${maxParticipants}`,
       headerRight: () => (
         <TouchableOpacity onPress={() => setTrustPanelVisible(true)} style={{ paddingHorizontal: 12 }}>
-          <Text style={{ fontWeight: '600' }}>참가인원</Text>
+          <Text style={{ fontWeight: '600' }}>평가하기</Text>
         </TouchableOpacity>
       ),
     });
@@ -183,7 +184,7 @@ export default function ChatRoomScreen() {
       .then(res => {
         if (!mounted) return;
         const p = res.data;
-        if (!title && typeof p.content === 'string') setRoomTitle(p.content);
+        if (typeof p.title === 'string') setRoomTitle(p.title);   // 🔹 무조건 제목 갱신
         if (typeof p.participantCount === 'number') setParticipantCount(p.participantCount);
         if (typeof p.maxParticipants === 'number') setMaxParticipants(p.maxParticipants);
       })
@@ -379,9 +380,15 @@ export default function ChatRoomScreen() {
                   }}
                 >
                   <Image
-                    source={p.profileImage ? { uri: `${p.profileImage}?t=${Date.now()}` } : require('../assets/user.png')}
+                    source={
+                      p.profileImage && p.profileImage.trim() !== ""
+                        ? { uri: `${p.profileImage}?t=${Date.now()}` }
+                        : require('../assets/user.png')
+                    }
                     style={styles.avatar}
                   />
+
+
                   <Text style={styles.participantName}>{p.nickname}</Text>
                 </TouchableOpacity>
 

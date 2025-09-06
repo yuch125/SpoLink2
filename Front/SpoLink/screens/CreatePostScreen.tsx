@@ -9,6 +9,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/RootStackParamList';
@@ -157,6 +158,8 @@ const onChangeDateTime = (event: any, selected?: Date) => {
   };
 
   return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+
     <KeyboardAvoidingView
     style={{ flex: 1 }}
     behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -270,7 +273,7 @@ const onChangeDateTime = (event: any, selected?: Date) => {
 
       {/* 최대 참가자 수 */}
       <View style={styles.inputContainer}>
-        <Text>최대 참가자 수:</Text>
+        <Text>모집인원 수(자신 포함):</Text>
         <TextInput
           keyboardType="numeric"
           value={String(maxParticipants)}
@@ -285,6 +288,8 @@ const onChangeDateTime = (event: any, selected?: Date) => {
       </TouchableOpacity>
       </ScrollView>
   </KeyboardAvoidingView>
+  </SafeAreaView>
+
 );
 }
 

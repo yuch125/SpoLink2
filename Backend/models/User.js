@@ -18,9 +18,9 @@ const userSchema = new mongoose.Schema(
         '고등학생',
         '대학생',
         '20대','30대','40대','50대 이상',
-        '기타'
+        '나이'
       ],
-      default: '기타'
+      default: '나이'
     },    
 
     profileImage: {

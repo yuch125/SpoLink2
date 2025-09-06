@@ -35,6 +35,7 @@ import { FlatList } from 'react-native';
 import { SERVER_URL } from '../constants';
 import { useProfile } from '../contexts/ProfileContext';
 import { haversineDistance } from '../utils/distance';
+import { SafeAreaView } from 'react-native-safe-area-context';
 const categoryIcons: Record<string, any> = {
   농구: require('../assets/basketball.png'),
   축구: require('../assets/soccer-ball-variant.png'),
@@ -285,7 +286,7 @@ export default function HomeScreen() {
 
 
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <View>
             <Text style={styles.title}>SpoLink</Text>
@@ -395,7 +396,7 @@ export default function HomeScreen() {
             <Image source={require('../assets/messenger.png')} style={styles.navIcon} />
           </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
   

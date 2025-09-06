@@ -64,11 +64,6 @@ export default function MessageBubble({ message, currentUserId, unreadCount = 0,
             {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </Text>
         )}
-        {isOwn && unreadCount > 0 && (
-          <View style={styles.badgeContainer}>
-            <Text style={styles.badgeText}>{unreadCount}</Text>
-          </View>
-        )}
       </View>
     </View>
   );

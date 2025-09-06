@@ -33,18 +33,28 @@ export default function EditPostScreen() {
     latitude: number;
     longitude: number;
   } | null>(null);
+  const [maxParticipants, setMaxParticipants] = useState(
+    post.maxParticipants?.toString() || '4'
+  );
+
+  const [preferredAgeGroups, setPreferredAgeGroups] = useState<string[]>(
+    post.preferredAgeGroups || []
+  );
+
+  const ageOptions = ['초등학생', '중학생', '고등학생', '20대', '30대', '40대 이상', '상관없음'];
+
   const [locationName, setLocationName] = useState<string>(''); // ✅ 이 줄 추가
   const [detail, setDetail] = useState(post.detail);
   const [showPicker, setShowPicker] = useState(false);
   const [pickerMode, setPickerMode] = useState<'date' | 'time'>('date');
   const [pickerTarget, setPickerTarget] = useState<'date' | 'startTime' | 'endTime'>('date');
-  
+
   const openPicker = (target: 'date' | 'startTime' | 'endTime') => {
     setPickerTarget(target);
     setPickerMode(target === 'date' ? 'date' : 'time');
     setShowPicker(true);
   };
-  
+
   const onChangeDateTime = (event: any, selected?: Date) => {
     if (!selected) {
       setShowPicker(false);
@@ -87,10 +97,10 @@ export default function EditPostScreen() {
   }, [navigation, route.params?.selectedPlace]);
 
   const startDateTime = new Date(date!);
-startDateTime.setHours(startTime!.getHours(), startTime!.getMinutes());
+  startDateTime.setHours(startTime!.getHours(), startTime!.getMinutes());
 
-const endDateTime = new Date(date!);
-endDateTime.setHours(endTime!.getHours(), endTime!.getMinutes());
+  const endDateTime = new Date(date!);
+  endDateTime.setHours(endTime!.getHours(), endTime!.getMinutes());
 
 
   const handleSave = async () => {
@@ -102,12 +112,14 @@ endDateTime.setHours(endTime!.getHours(), endTime!.getMinutes());
         endTime: endDateTime.toISOString(),      // ✅ 필수
         location: location
           ? {
-              type: 'Point',
-              coordinates: [location.longitude, location.latitude],
-            }
+            type: 'Point',
+            coordinates: [location.longitude, location.latitude],
+          }
           : null,
         detail,
         locationName,
+        maxParticipants: parseInt(maxParticipants, 10),
+        preferredAgeGroups,
       };
       await axios.put(`${SERVER_URL}/posts/${post._id}`, updated, {
         headers: { 'Content-Type': 'application/json' },
@@ -211,6 +223,49 @@ endDateTime.setHours(endTime!.getHours(), endTime!.getMinutes());
 
       </TouchableOpacity>
 
+      {/* 최대 인원 */}
+      <TextInput
+        style={styles.input}
+        placeholder="최대 인원"
+        value={maxParticipants}
+        onChangeText={setMaxParticipants}
+        keyboardType="numeric"
+      />
+
+      {/* 연령대 선택 */}
+      <View style={{ marginBottom: 12 }}>
+        <Text style={{ marginBottom: 8 }}>선호 연령대</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+          {ageOptions.map((age) => (
+            <TouchableOpacity
+              key={age}
+              style={[
+                styles.ageButton,
+                preferredAgeGroups.includes(age) && styles.ageButtonSelected,
+              ]}
+              onPress={() => {
+                if (preferredAgeGroups.includes(age)) {
+                  setPreferredAgeGroups(preferredAgeGroups.filter((a) => a !== age));
+                } else {
+                  setPreferredAgeGroups([...preferredAgeGroups, age]);
+                }
+              }}
+            >
+              <Text
+                style={
+                  preferredAgeGroups.includes(age)
+                    ? styles.ageTextSelected
+                    : styles.ageText
+                }
+              >
+                {age}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+
       <TextInput
         style={styles.input}
         placeholder="세부사항"
@@ -270,4 +325,25 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
+  ageButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    margin: 4,
+    backgroundColor: '#f2f2f2',
+  },
+  ageButtonSelected: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  ageText: {
+    color: '#000',
+  },
+  ageTextSelected: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  
 });

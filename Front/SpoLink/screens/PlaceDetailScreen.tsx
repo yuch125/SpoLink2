@@ -152,7 +152,7 @@ export default function PlaceDetailScreen() {
         {/* API에서 넘어온 거리 (m) */}
         {parsedDistance !== null && (
           <>
-            <Text style={styles.label}>카카오 API 제공 거리:</Text>
+            <Text style={styles.label}>거리:</Text>
             <Text style={styles.text}>
               {parsedDistance < 1000
                 ? `${parsedDistance} m`

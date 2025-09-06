@@ -36,9 +36,12 @@ export default function PostCard({ post, currentUser, onDelete, onEdit }: Props)
 
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const writerId =
-    typeof post.writer === 'string'
-      ? post.writer
-      : post.writer?._id || '';
+  typeof post.writer === 'string'
+    ? post.writer
+    : post.writer?._id || post.writer?.userId || '';
+
+const isOwner = String(currentUser) === String(writerId);
+
 
   const writerNickname =
     typeof post.writer === 'object' && post.writer?.nickname
@@ -67,7 +70,11 @@ export default function PostCard({ post, currentUser, onDelete, onEdit }: Props)
 
   console.log('🖼 작성자 profileImage:', post.writer?.profileImage);
 
-  const isOwner = currentUser === writerId;
+
+  const alreadyJoined = post.participants?.some(
+    (p: any) => String(p.userId) === String(currentUser)
+  );
+  
 
   const handleApply = async () => {
     console.log('🟢 참가신청 버튼 클릭됨', post._id, currentUser);
@@ -143,47 +150,42 @@ export default function PostCard({ post, currentUser, onDelete, onEdit }: Props)
         <FontAwesome name="comment-o" size={14} color="#555" /> {post.commentCount || 0}
       </Text>
 
-      {/* 참가 신청 버튼 */}
       {!isOwner && (
-        <>
-          {post.myApplicationStatus === 'pending' && (
-            <Text style={{ marginTop: 8, color: '#666', fontWeight: 'bold' }}>
-              이미 참가신청한 모집입니다
-            </Text>
-          )}
-          {post.myApplicationStatus === 'accepted' && (
-            <Text style={[styles.applyButton, { backgroundColor: '#ccc' }]}>
-              참가신청이 수락되었습니다
-            </Text>
-          )}
-          {post.myApplicationStatus === 'rejected' && (
-            <Text style={[styles.applyButton, { backgroundColor: '#ccc' }]}>
-              참가신청이 거절되었습니다
-            </Text>
-          )}
-
-          {!post.myApplicationStatus && (
-            <>
-              {post.isFull ? (
-                <Text style={[styles.applyButton, { backgroundColor: '#ccc' }]}>
-                  모집마감
-                </Text>
-              ) : !isAgeAllowed ? (
-                <Text style={[styles.applyButton, { backgroundColor: '#ccc' }]}>
-                  이 모집글은 {allowedAgeGroups.join(', ')}만 참가 가능합니다
-                </Text>
-              ) : (
-                <TouchableOpacity
-                  style={styles.applyButton}
-                  onPress={handleApply}
-                >
-                  <Text style={styles.buttonText}>참가 신청</Text>
-                </TouchableOpacity>
-              )}
-            </>
-          )}
-        </>
-      )}
+  <>
+    {alreadyJoined ? (
+      <Text style={{ marginTop: 8, color: '#666', fontWeight: 'bold' }}>
+        참가 중
+      </Text>
+    ) : post.myApplicationStatus === 'pending' ? (
+      <Text style={{ marginTop: 8, color: '#666', fontWeight: 'bold' }}>
+        이미 참가신청한 모집입니다
+      </Text>
+    ) : post.myApplicationStatus === 'accepted' ? (
+      <Text style={[styles.applyButton, { backgroundColor: '#ccc' }]}>
+        참가신청이 수락되었습니다
+      </Text>
+    ) : post.myApplicationStatus === 'rejected' ? (
+      <Text style={[styles.applyButton, { backgroundColor: '#ccc' }]}>
+        참가신청이 거절되었습니다
+      </Text>
+    ) : post.isFull ? (
+      <Text style={[styles.applyButton, { backgroundColor: '#ccc' }]}>
+        모집마감
+      </Text>
+    ) : !isAgeAllowed ? (
+      <Text style={[styles.applyButton, { backgroundColor: '#ccc' }]}>
+        이 모집글은 {allowedAgeGroups.join(', ')}만 참가 가능합니다
+      </Text>
+    ) : (
+      <TouchableOpacity
+        style={styles.applyButton}
+        onPress={handleApply}
+      >
+        <Text style={styles.buttonText}>참가 신청</Text>
+      </TouchableOpacity>
+    )}
+  </>
+)}
 
 
 

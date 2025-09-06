@@ -121,8 +121,10 @@ router.get('/:roomId/participants', async (req, res) => {
         _id: key,
         userId: key,
         nickname: u?.nickname ?? p.nickname ?? '알수없음',
-        profileImage: u?.profileImage ?? null,
-      };
+        profileImage: u?.profileImage && u.profileImage.trim() !== ''
+        ? u.profileImage
+        : null,
+            };
     });
 
     return res.json({

@@ -18,7 +18,8 @@ import ApplicationsScreen from './screens/ApplicationsScreen';
 import PostDetailScreen from './screens/PostDetailScreen';
 import ChatListScreen from './screens/ChatListScreen';
 import ChatRoomScreen from './screens/ChatRoomScreen';
-
+import CreatedPostsScreen from './screens/CreatedPostsScreen';
+import JoinedPostsScreen from './screens/JoinedPostsScreen';
 import { ProfileProvider } from './contexts/ProfileContext';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -49,6 +50,8 @@ export default function App() {
             <Stack.Screen name="Applications" component={ApplicationsScreen} options={{ title: '신청자 관리' }} />
             <Stack.Screen name="ChatList" component={ChatListScreen} options={{ title: '채팅 목록' }} />
             <Stack.Screen name="ChatRoom" component={ChatRoomScreen} options={{ title: '채팅방' }} />
+            <Stack.Screen name="CreatedPosts" component={CreatedPostsScreen} options={{ title: '만든 모임' }} />
+            <Stack.Screen name="JoinedPosts" component={JoinedPostsScreen} options={{ title: '참가한 모임' }} />
             <Stack.Screen name="PostDetail" component={PostDetailScreen} options={{ title: '게시글 상세' }} />
           </Stack.Navigator>
         </NavigationContainer>

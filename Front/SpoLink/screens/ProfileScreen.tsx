@@ -139,43 +139,28 @@ export default function ProfileScreen() {
         style={styles.avatar}
       />
       <Text style={styles.nickname}>{profileData.nickname}</Text>
-      <Text style={styles.bio}>{profileData.bio?.trim() || '한줄 소개가 없습니다.'}</Text>
-      <Text style={styles.trust}>
-        신뢰도: {getTrustLabel(profileData.trustScore)}
-        {profileData.trustStats && (
-          <> ({profileData.trustStats.likes} 👍 / {profileData.trustStats.dislikes} 👎)</>
-        )}
-      </Text>
-
+      <Text style={styles.bio}>한줄소개 : {profileData.bio?.trim() || '한줄 소개가 없습니다.'}</Text>
       <Text style={styles.age}>
         나이: {profileData.ageGroup || '미입력'}
       </Text>
-
-      <Text style={styles.sectionTitle}>생성한 모임</Text>
-      <FlatList
-        data={profileData.createdPosts}
-        keyExtractor={item => item._id}
-        renderItem={({ item }) => (
-          <View>
-            <PostCard post={item} currentUser={viewerId || ''} />
-          </View>
-        )}
-        ListEmptyComponent={<Text style={styles.emptyText}>생성한 모임이 없습니다.</Text>}
-      />
-
-      <Text style={styles.sectionTitle}>참가한 모임</Text>
-      <FlatList
-        data={profileData.joinedPosts}
-        keyExtractor={item => item._id}
-        renderItem={({ item }) => (
-          <View>
-            <PostCard post={item} currentUser={viewerId || ''} />
-          </View>
-        )}
-        ListEmptyComponent={<Text style={styles.emptyText}>참가한 모임이 없습니다.</Text>}
-      />
+  
+      {/* ✅ 버튼 영역 */}
+      <TouchableOpacity
+        style={styles.menuButton}
+        onPress={() => navigation.navigate('CreatedPosts', { userId })}
+      >
+        <Text style={styles.menuButtonText}>생성한 모임 보기</Text>
+      </TouchableOpacity>
+  
+      <TouchableOpacity
+        style={styles.menuButton}
+        onPress={() => navigation.navigate('JoinedPosts', { userId })}
+      >
+        <Text style={styles.menuButtonText}>참가한 모임 보기</Text>
+      </TouchableOpacity>
     </View>
   );
+  
 }
 
 const styles = StyleSheet.create({
@@ -203,4 +188,17 @@ const styles = StyleSheet.create({
   // PostCard를 조금 더 크게 보이도록
   postWrapper: { marginVertical: 6 },
   emptyText: { textAlign: 'center', color: '#666', marginVertical: 12 },
+  menuButton: {
+    backgroundColor: '#007AFF',
+    padding: 12,
+    borderRadius: 8,
+    marginVertical: 6,
+    alignItems: 'center',
+  },
+  menuButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  
 });

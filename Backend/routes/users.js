@@ -14,12 +14,12 @@ function toAgeGroup(age) {
   const n = parseInt(age, 10);
   if (Number.isNaN(n)) return undefined;
 
-  if (n === 13) return '중1';
-  if (n === 14) return '중2';
-  if (n === 15) return '중3';
-  if (n === 16) return '고1';
-  if (n === 17) return '고2';
-  if (n === 18) return '고3';
+  if (n === 14) return '중1';
+  if (n === 15) return '중2';
+  if (n === 16) return '중3';
+  if (n === 17) return '고1';
+  if (n === 18) return '고2';
+  if (n === 19) return '고3';
   if (n >= 20 && n <= 29) return '20대';
   if (n >= 30 && n <= 39) return '30대';
   if (n >= 40 && n <= 49) return '40대';
