@@ -22,7 +22,7 @@ import { KAKAO_API_KEY } from '../config';
 type PlaceSearchNavProp = NativeStackNavigationProp<RootStackParamList, 'PlaceSearch'>;
 type PlaceSearchRouteProp = RouteProp<RootStackParamList, 'PlaceSearch'>;
 
-const FACILITY_KEYWORDS = ['체육관', '농구장', '축구장', '농구', '배드민턴', '배드민턴장', '런닝', '산책로', '축구'];
+const FACILITY_KEYWORDS = ['체육관', '농구장', '축구장', '농구', '배드민턴', '배드민턴장', '런닝', '공원', '축구'];
 
 const PlaceSearchScreen: React.FC = () => {
   const navigation = useNavigation<PlaceSearchNavProp>();
@@ -76,7 +76,7 @@ const PlaceSearchScreen: React.FC = () => {
     }
 
     if (!FACILITY_KEYWORDS.some((k) => query.includes(k))) {
-      setErrorMsg('체육관, 농구장, 축구장만 검색 가능합니다.');
+      setErrorMsg('장소를 검색해보세요.');
       setKeyword('체육관');
       return;
     }
@@ -111,30 +111,37 @@ const PlaceSearchScreen: React.FC = () => {
   };
 
   const handleSelect = (place: KakaoPlace) => {
+    const distanceKm =
+      place.distance
+        ? parseInt(place.distance, 10) < 1000
+          ? `${place.distance} m`
+          : `${(parseInt(place.distance, 10) / 1000).toFixed(1)} km`
+        : null;
+  
+    const selected = {
+      name: place.place_name,
+      latitude: parseFloat(place.y),
+      longitude: parseFloat(place.x),
+      distance: distanceKm,
+    };
+  
     if (route.params?.from === 'CreatePost') {
       navigation.navigate('CreatePost', {
         userId,
         nickname,
-        selectedPlace: {
-          name: place.place_name,
-          latitude: parseFloat(place.y),
-          longitude: parseFloat(place.x),
-        },
+        selectedPlace: selected,
         prevData,
       });
     } else if (route.params?.from === 'EditPost' && post) {
       navigation.navigate('EditPost', {
         userId,
         nickname,
-        selectedPlace: {
-          name: place.place_name,
-          latitude: parseFloat(place.y),
-          longitude: parseFloat(place.x),
-        },
+        selectedPlace: selected,
         post,
       });
     }
   };
+  
   
 
   const handleDetail = (place: KakaoPlace) => {

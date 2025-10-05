@@ -20,6 +20,7 @@ export default function JoinedPostsScreen() {
       .then(res => setPosts(res.data))
       .catch(console.error);
   }, [userId]);
+  
 
   return (
     <View style={styles.container}>

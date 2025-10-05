@@ -96,6 +96,7 @@ const isOwner = String(currentUser) === String(writerId);
       }
     }
   };
+  console.log(post)
   console.log('🧪 참가자 수 확인:', post.participantCount, '/', post.maxParticipants);
   console.log('👤 현재 유저 ageGroup:', userAgeGroup);
   console.log('📦 모집글 허용 ageGroups:', allowedAgeGroups);

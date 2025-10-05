@@ -281,27 +281,37 @@ export default function EditPostScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 20 },
+  container: { flex: 1, padding: 20, backgroundColor: '#f2f2f2' },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 3,
+    marginBottom: 16,
+  },
+  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 12,
+    borderColor: '#ddd',
     borderRadius: 8,
+    padding: 12,
     marginBottom: 12,
+    fontSize: 15,
+    backgroundColor: '#fafafa',
   },
-  locationBox: {
-    justifyContent: 'center',
-    height: 48,
-  },
+  locationBox: { justifyContent: 'center', height: 48 },
   button: {
     backgroundColor: '#007AFF',
-    padding: 16,
+    padding: 15,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 20,
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  buttonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
   sportButtonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -311,20 +321,14 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     marginHorizontal: 4,
-    borderRadius: 6,
+    borderRadius: 8,
     backgroundColor: '#eee',
     alignItems: 'center',
   },
-  sportButtonSelected: {
-    backgroundColor: '#007AFF',
-  },
-  sportText: {
-    color: '#000',
-  },
-  sportTextSelected: {
-    color: '#fff',
-    fontWeight: '600',
-  },
+  sportButtonSelected: { backgroundColor: '#007AFF' },
+  sportText: { color: '#000' },
+  sportTextSelected: { color: '#fff', fontWeight: '600' },
+  sectionTitle: { fontSize: 16, fontWeight: '600', marginBottom: 8 },
   ageButton: {
     paddingVertical: 8,
     paddingHorizontal: 12,
@@ -334,16 +338,7 @@ const styles = StyleSheet.create({
     margin: 4,
     backgroundColor: '#f2f2f2',
   },
-  ageButtonSelected: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  ageText: {
-    color: '#000',
-  },
-  ageTextSelected: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  
+  ageButtonSelected: { backgroundColor: '#007AFF', borderColor: '#007AFF' },
+  ageText: { color: '#000' },
+  ageTextSelected: { color: '#fff', fontWeight: '600' },
 });

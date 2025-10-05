@@ -26,8 +26,10 @@ type ProfileData = {
   trustScore: number;
   trustStats?: { likes: number; dislikes: number }; // ✅ 추가
   ageGroup?: string; // ✅ age 대신 ageGroup으로
+  age? : string,
   createdPosts: Post[];
   joinedPosts: Post[];
+  trust? : {dislike : number, grade : string, likes : number, score : number, total : number}
 };
 
 export default function ProfileScreen() {
@@ -65,7 +67,7 @@ export default function ProfileScreen() {
           headers: { Authorization: `Bearer ${token}` },
         });
         const u = res.data;
-
+        console.log(u)
         const { data: mine } = await axios.get<Post[]>(
           `${SERVER_URL}/posts?writer=${userId}`,
           { headers: { Authorization: `Bearer ${token}` } }
@@ -83,8 +85,10 @@ export default function ProfileScreen() {
           trustScore: u.trustScore ?? 0,
           trustStats: u.trustStats, // 서버에서 { likes, dislikes } 제공된다고 가정
           ageGroup: u.ageGroup,
+          age: u.age,
           createdPosts: mine,
           joinedPosts: joined,
+          trust : u.trust
         });
 
 
@@ -141,7 +145,10 @@ export default function ProfileScreen() {
       <Text style={styles.nickname}>{profileData.nickname}</Text>
       <Text style={styles.bio}>한줄소개 : {profileData.bio?.trim() || '한줄 소개가 없습니다.'}</Text>
       <Text style={styles.age}>
-        나이: {profileData.ageGroup || '미입력'}
+        나이: {profileData.age +"세" || '미입력'}
+      </Text>
+      <Text style={styles.trust}>
+        신뢰도: {profileData.trust?.grade}
       </Text>
   
       {/* ✅ 버튼 영역 */}

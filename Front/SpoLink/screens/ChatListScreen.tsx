@@ -40,7 +40,7 @@ export default function ChatListScreen({ route }: Props) {
   const { userId, nickname } = route.params;
 
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
-
+  console.log(rooms)
   useEffect(() => {
     const fetchRooms = async () => {
       try {
@@ -93,7 +93,7 @@ export default function ChatListScreen({ route }: Props) {
               style={styles.room}
             >
               <Text style={styles.title}>
-                {emoji} {item.postTitle}
+              {item.postTitle}
               </Text>
               <Text style={styles.message}>💬 {item.lastMessage}</Text>
             </TouchableOpacity>

@@ -20,7 +20,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList, Post } from '../navigation/RootStackParamList';
 import { SERVER_URL } from '../constants';
 import { useProfile } from '../contexts/ProfileContext';
-
+import { commonStyles } from '../styles/commonStyle';
 // 네비게이션 타입 정의
 type MyProfileRouteProp = RouteProp<RootStackParamList, 'MyProfile'>;
 type MyProfileNavProp = NativeStackNavigationProp<RootStackParamList, 'MyProfile'>;
@@ -35,11 +35,11 @@ export default function MyProfileScreen() {
   const [nickname, setNickname] = useState<string>('');
   const [bio, setBio] = useState<string>('');
   const [age, setAge] = useState<string>('');
+  const [ageGroup, setAgegroup] = useState<String>('');
   const [trustScore, setTrustScore] = useState<number>(0);
   const [remainingChanges, setRemainingChanges] = useState<number>(3);
   const [editing, setEditing] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
-
   const [createdPosts, setCreatedPosts] = useState<Post[]>([]);
   const [joinedPosts, setJoinedPosts] = useState<Post[]>([]);
 
@@ -98,10 +98,11 @@ export default function MyProfileScreen() {
           headers: { Authorization: `Bearer ${token}` }
         });
         const u = res.data;
+        console.log(u)
         setNickname(u.nickname);
         setBio(u.bio);
-        setAge(u.ageGroup ?? '');
-        setTrustScore(u.trustScore);
+        setAgegroup(u.ageGroup ?? '')
+        setAge(u.age ?? '');
         setRemainingChanges(u.remainingNicknameChanges);
         setProfileImage(u.profileImage ?? '');
         setProfile({
@@ -110,6 +111,7 @@ export default function MyProfileScreen() {
           bio: u.bio,
           profileImage: u.profileImage,
           ageGroup: u.ageGroup,
+          age: u.age,
           trust: u.trust,   // 전체 trust 객체
         });
 
@@ -147,7 +149,6 @@ export default function MyProfileScreen() {
       setNickname(u.nickname);
       setBio(u.bio);
       setAge(u.age);
-      setTrustScore(u.trustScore);
       setRemainingChanges(u.remainingNicknameChanges);
       setProfile({ nickname: u.nickname, bio: u.bio, age: u.age, trustScore: u.trustScore, remainingNicknameChanges: u.remainingNicknameChanges });
       setEditing(false);
@@ -183,77 +184,74 @@ export default function MyProfileScreen() {
 
 
   return (
-    <View style={styles.container}>
-      {/* 로그아웃 버튼 - 오른쪽 위 */}
+    <View style={commonStyles.screen}>
+      {/* 프로필 카드 */}
       <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
         <Text style={styles.logoutText}>로그아웃</Text>
       </TouchableOpacity>
-
-      {/* 프로필 섹션 (20%) */}
-      <View style={styles.profileSection}>
-        <TouchableOpacity onPress={() => editing && pickAndUploadImage()}>
+      <View style={commonStyles.card}>
+        <TouchableOpacity onPress={() => editing && pickAndUploadImage()} style={{ alignSelf: 'center', marginBottom: 12 }}>
           <Image
             source={profileImage ? { uri: profileImage } : require('../assets/user.png')}
-            style={styles.avatar}
+            style={{ width: 100, height: 100, borderRadius: 50 }}
           />
         </TouchableOpacity>
 
         {editing ? (
-          <View style={styles.editBlock}>
-            <Text style={styles.editNotice}>닉네임은 최대 3번만 변경가능합니다.</Text>
-            <TextInput style={styles.input} value={nickname} onChangeText={setNickname} placeholder="닉네임" />
-            <TextInput style={styles.input} value={age} onChangeText={setAge} placeholder="예) 23" keyboardType="numeric" />
-            <TextInput style={styles.input} value={bio} onChangeText={setBio} placeholder="한줄 소개" />
+          <>
+            <TextInput style={commonStyles.input} value={nickname} onChangeText={setNickname} placeholder="닉네임" />
+            <TextInput style={commonStyles.input} value={age} onChangeText={setAge} placeholder="나이" keyboardType="numeric" />
+            <TextInput style={commonStyles.input} value={bio} onChangeText={setBio} placeholder="한 줄 소개" />
 
-            {/* 저장/취소 버튼 묶음 */}
-            <View style={styles.editButtonsRow}>
-              <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-                <Text style={styles.saveText}>저장</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setEditing(false)}>
-                <Text style={styles.cancelText}>취소</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : (
-          <View style={styles.infoBlock}>
-            <Text style={styles.nickname}>{nickname}</Text>
-            <Text style={styles.intro}>한줄소개 : {bio?.trim() || '한줄 소개가 없습니다.'}</Text>   {/* ✅ 수정 */}
-            <Text style={styles.intro}>나이: {age || '미입력'}</Text>
-            <TouchableOpacity onPress={() => setEditing(true)}>
-              <Text style={styles.editText}>✏️ 프로필 수정</Text>
+            <TouchableOpacity style={commonStyles.button} onPress={handleSave}>
+              <Text style={commonStyles.buttonText}>저장</Text>
             </TouchableOpacity>
-          </View>
+          </>
+        ) : (
+          <>
+            <Text style={{ fontSize: 18, fontWeight: 'bold', textAlign: 'center' }}>{nickname}</Text>
+            <Text style={{ fontSize: 14, color: '#555', textAlign: 'center' }}>{bio || '한 줄 소개가 없습니다.'}</Text>
+            <Text style={{ fontSize: 14, color: '#555', textAlign: 'center' }}>나이: {age ? `${age}세` : '미입력'}</Text>
+
+        
+              <Text style={{ fontSize: 13, color: '#333', textAlign: 'center', marginTop: 4 }}>
+                신뢰도: {profile?.trust?.grade}
+              </Text>
+
+            <TouchableOpacity onPress={() => setEditing(true)} style={{ marginTop: 8 }}>
+              <Text style={{ fontSize: 13, color: '#007AFF', textAlign: 'center' }}>✏️ 프로필 수정</Text>
+            </TouchableOpacity>
+          </>
         )}
       </View>
 
-      {/* 모임 리스트 대신 버튼으로 */}
-      <View style={styles.listSection}>
-        <TouchableOpacity
-          style={styles.menuButton}
-          onPress={() => navigation.navigate('CreatedPosts', { userId })}
-        >
-          <Text style={styles.menuButtonText}>만든 모임 보기</Text>
+      {/* 활동 카드 */}
+      <View style={commonStyles.card}>
+        <TouchableOpacity style={commonStyles.button} onPress={() => navigation.navigate('CreatedPosts', { userId })}>
+          <Text style={commonStyles.buttonText}>만든 모임 보기</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.menuButton}
-          onPress={() => navigation.navigate('JoinedPosts', { userId })}
-        >
-          <Text style={styles.menuButtonText}>참가한 모임 보기</Text>
+        <TouchableOpacity style={commonStyles.button} onPress={() => navigation.navigate('JoinedPosts', { userId })}>
+          <Text style={commonStyles.buttonText}>참가한 모임 보기</Text>
         </TouchableOpacity>
       </View>
-
     </View>
   );
+
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: '#fff' },
 
   logoutBtn: {
-    position: 'absolute', top: 12, right: 12, padding: 6, zIndex: 10,
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: '#f2f2f2',
+    borderRadius: 6,
+    zIndex: 10
   },
   logoutText: { fontSize: 12, color: '#007AFF', fontWeight: '600' },
 
@@ -319,6 +317,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  
+
 
 });

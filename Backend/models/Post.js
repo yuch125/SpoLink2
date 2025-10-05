@@ -14,6 +14,7 @@ const postSchema = new Schema({
   },
   locationName: { type: String, required: true },
   detail: String,
+  locationDistance: { type: String },
   applicants: [
     { userId: { type: Schema.Types.ObjectId, ref: 'User', required: true }, accepted: Boolean }
   ],

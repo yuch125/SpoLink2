@@ -10,6 +10,7 @@ const userSchema = new mongoose.Schema(
     nickname: { type: String },
     // 한 줄 소개
     bio: { type: String },
+    age : {type : Number, default: null},
     // 나이 그룹
     ageGroup: {
       type: String,
@@ -27,17 +28,6 @@ const userSchema = new mongoose.Schema(
       type: String, // 업로드된 이미지의 URL
       default: '',  // 없을 경우 기본 이미지
     },
-
-    // 신뢰도 점수 (0~100)
-    trustScore: {
-      type: Number,
-      default: 50.0  // 기본값: 보통
-    },
-    trustScoreCount: {
-      type: Number,
-      default: 1,
-    },
-
     likesCount: { type: Number, default: 0 },
  dislikesCount: { type: Number, default: 0 },
 

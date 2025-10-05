@@ -260,20 +260,25 @@ app.post('/login', async (req, res) => {
 
 // [PUT] /users/:id - 프로필 수정
 app.put('/users/:id', async (req, res) => {
-  const { nickname, profileImage, bio } = req.body;
+  const { nickname, profileImage, bio, age } = req.body; // age 추가
 
   try {
     const updated = await User.findByIdAndUpdate(
       req.params.id,
-      { nickname, profileImage, bio },
+      { nickname, profileImage, bio, age }, // age 업데이트
       { new: true }
     ).select('-password');
 
     res.json({ success: true, message: '프로필이 수정되었습니다.', user: updated });
   } catch (err) {
-    res.status(500).json({ success: false, message: '수정 실패', error: err.message });
+    res.status(500).json({
+      success: false,
+      message: '수정 실패',
+      error: err.message,
+    });
   }
 });
+
 
 // ─────────────────────────────────────────────
 // 🔌 6. MongoDB 연결 및 서버 실행

@@ -25,6 +25,7 @@ export type Post = {
   content: string;
   time: string;
   location: { coordinates: [number, number] };
+  locationDistance?: string; // ✅ 새로 추가
   detail: string;
   writer: {
     _id: string;
@@ -88,7 +89,8 @@ export type RootStackParamList = {
   CreatePost: {
     userId?: string;
     nickname?: string;
-    selectedPlace?: { name: string; latitude: number; longitude: number };
+    selectedPlace?: { name: string; latitude: number; longitude: number  , distance?: string | null; // ✅ 새로 추가
+  };
     prevData?: {
       category?: string;
       content?: string;
@@ -109,9 +111,9 @@ export type RootStackParamList = {
     prevData?: {
       category?: string;
       content?: string;
-      date?: Date | null;        // ✅ null 허용
-      startTime?: Date | null;   // ✅ null 허용
-      endTime?: Date | null;     // ✅ null 허용
+      date?: Date | undefined;        // ✅ null 허용
+      startTime?: Date | undefined;   // ✅ null 허용
+      endTime?: Date | undefined;     // ✅ null 허용
       detail?: string;
     };
 

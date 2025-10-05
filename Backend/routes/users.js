@@ -39,13 +39,11 @@ function calcTrust(up = 0, down = 0) {
   const total = up + down;
   const score = Math.round(((up + 1) / (total + 2)) * 100); // 0~100
   let grade = '데이터부족';
-  if (total >= 3) {
     if (score >= 80) grade = '매우높음';
     else if (score >= 60) grade = '높음';
     else if (score >= 40) grade = '보통';
     else if (score >= 20) grade = '낮음';
     else grade = '매우낮음';
-  }
   return { score, grade, total };
 }
 
@@ -62,7 +60,7 @@ router.get('/:userId', async (req, res) => {
   try {
     console.log('▶ GET /users/:userId 호출, userId =', userId);
     const user = await User.findById(userId)
-      .select('nickname bio profileImage trustScore trustScoreCount likesCount dislikesCount ageGroup');
+      .select('nickname bio profileImage trustScore trustScoreCount likesCount dislikesCount ageGroup age');
 
     if (!user) {
       return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
@@ -89,6 +87,7 @@ router.get('/:userId', async (req, res) => {
       // 하위호환(원래 필드도 유지하고 싶으면 남겨둠)
       trustScore: score,
       trustScoreCount: total,
+      age: user.age ?? null,                // 👈 실제 숫자 나이
     });
   } catch (err) {
     console.error('GET /users/:userId error', err);
@@ -104,7 +103,7 @@ router.get('/:userId/applications', async (req, res) => {
       .find({ 'applicant.userId': userId, status: 'accepted' })
       .populate({
         path: 'post',
-        populate: { path: 'writer', select: 'userId nickname profileImage' }
+        populate: { path: 'writer', select: 'userId nickname profileImage status' }
       });
     // null인 post를 제거
     const posts = apps
@@ -127,10 +126,10 @@ router.patch('/:userId', async (req, res) => {
     const { newNickname, nickname, bio, age, ageGroup, profileImage } = req.body;
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
-
+    
     // 닉네임 변경 제한 (최대 3회)
     const nextNickname = (typeof newNickname === 'string') ? newNickname
-      : (typeof nickname === 'string' ? nickname : undefined);
+    : (typeof nickname === 'string' ? nickname : undefined);
     if (typeof nextNickname === 'string' && nextNickname !== user.nickname) {
       if (user.nicknameChangeCount >= 3) {
         return res.status(400).json({ error: '닉네임은 최대 3회까지 변경 가능합니다.' });
@@ -150,22 +149,30 @@ router.patch('/:userId', async (req, res) => {
             profileImage: profileImage                       // ← 새로 추가한 profileImage
           }
         }
-      );
-    }
-
-
-    // 3) 과거 게시글·댓글 동기화
-
+        );
+      }
+      
+      
+    // bio 업데이트
     if (bio !== undefined) user.bio = bio;
-    // 나이/나이그룹 처리
-    if (ageGroup !== undefined) {
-      user.ageGroup = normalizeAgeGroup(ageGroup);
-    } else if (age !== undefined) {
-      const g = toAgeGroup(age);
-      if (g) user.ageGroup = normalizeAgeGroup(g);
-    }
-    if (profileImage !== undefined) user.profileImage = profileImage; // ✅ 추가된 부분
 
+    // 나이 → age + ageGroup 변환
+    if (age !== undefined) {
+      const n = Number(age);
+      user.age = n;
+      const g = toAgeGroup(n);
+      if (g) user.ageGroup = normalizeAgeGroup(g);
+    } else if (ageGroup !== undefined) {
+      user.ageGroup = normalizeAgeGroup(ageGroup);
+    }
+    
+
+    // 프로필 이미지
+    if (profileImage !== undefined) user.profileImage = profileImage;
+
+    await user.save();
+      console.log('📥 PATCH /users/:userId 요청');
+      console.log(user)
     await user.save();
     return res.json({ user });  // 수정 후 응답
 

@@ -29,22 +29,20 @@ type Application = {
   _id: string;
   status: 'pending' | 'accepted' | 'rejected';
   applicant: {
-
     _id: string;
     nickname: string;
     trustScore: number;
     profileImage?: string;
     ageGroup?: string;
+    trust: {
+      grade: string;   // "매우높음", "높음", ...
+      score: number;   // 0~100
+      total: number;   // 평가 횟수
+      likes: number;
+      dislikes: number;
+    };
   };
 };
-const getTrustLabel = (score: number) => {
-  if (score >= 80) return '매우높음';
-  if (score >= 60) return '높음';
-  if (score >= 40) return '보통';
-  if (score >= 20) return '낮음';
-  return '매우낮음';
-};
-
 
 export default function ApplicationsScreen() {
   const route = useRoute<ApplicationsRouteProp>();
@@ -63,6 +61,9 @@ export default function ApplicationsScreen() {
       const res = await axios.get<Application[]>(
         `${SERVER_URL}/applications/post/${postId}`
       );
+      console.log("참가자 정보")
+      console.log(res.data)
+      console.log("---------------------")
       setApplications(res.data);
     } catch (err: any) {
       console.error('❌ 신청 목록 오류:', err.response?.data || err.message);
@@ -79,11 +80,9 @@ export default function ApplicationsScreen() {
   );
 
 
-
   const handleAccept = useCallback(
     async (
       id: string,
-      applicant: { _id: string; nickname: string; trustScore: number }
     ) => {
       try {
         const acceptRes = await axios.patch(
@@ -154,27 +153,28 @@ export default function ApplicationsScreen() {
           <View style={styles.header}>
             <Text style={styles.name}>{item.applicant.nickname}</Text>
             <Text style={styles.trust}>
-              [{getTrustLabel(item.applicant.trustScore)}]
+              [{item.applicant.trust?.grade ?? '데이터부족'}]
             </Text>
+
             {item.applicant.ageGroup && (
               <Text style={styles.ageGroup}>({item.applicant.ageGroup})</Text>
             )}
           </View>
         </TouchableOpacity>
-  
+
         <Text style={styles.status}>
           상태:{' '}
           {item.status === 'pending'
             ? '🕓 대기중'
             : item.status === 'accepted'
-            ? '✅ 수락됨'
-            : '❌ 거절됨'}
+              ? '✅ 수락됨'
+              : '❌ 거절됨'}
         </Text>
-  
+
         {item.status === 'pending' && (
           <View style={styles.buttons}>
             <TouchableOpacity
-              onPress={() => handleAccept(item._id, item.applicant)}
+              onPress={() => handleAccept(item._id)}
             >
               <Text style={styles.accept}>수락</Text>
             </TouchableOpacity>
@@ -187,7 +187,7 @@ export default function ApplicationsScreen() {
     ),
     [handleAccept, handleReject, navigation]
   );
-  
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>신청자 목록</Text>

@@ -25,7 +25,8 @@ router.post('/', async (req, res) => {
       writer, 
       maxParticipants, 
       locationName,
-      preferredAgeGroups   // ✅ 추가
+      preferredAgeGroups,
+      locationDistance, // ✅ 추가
     } = req.body;
 
     console.log('📍 locationName 도착:', locationName); // 🔍 여기
@@ -48,6 +49,7 @@ router.post('/', async (req, res) => {
       endTime,
       location,
       locationName,
+      locationDistance,
       detail,
       writer: new mongoose.Types.ObjectId(writer), // ✅ 여기!
       maxParticipants: maxParticipants || 12,

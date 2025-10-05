@@ -49,8 +49,6 @@ export default function CreatePostScreen() {
   const [expiresAt, setExpiresAt] = useState(new Date());
   const [maxParticipants, setMaxParticipants] = useState(12);
 
-  // ✅ 날짜 + 시간
-  // 상태
 // ✅ 날짜 + 시간
 const [date, setDate] = useState<Date | null>(null);
 const [startTime, setStartTime] = useState<Date | null>(null);
@@ -129,6 +127,7 @@ const onChangeDateTime = (event: any, selected?: Date) => {
         type: 'Point',
         coordinates: coordinates ? [coordinates.lng, coordinates.lat] : [0, 0],
       },
+      locationDistance: selectedPlace?.distance || '', // ✅ 추가
       detail,
       preferredAgeGroups,
     };
@@ -158,151 +157,202 @@ const onChangeDateTime = (event: any, selected?: Date) => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-
-    <KeyboardAvoidingView
-    style={{ flex: 1 }}
-    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-  >
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={{ paddingBottom: 40 }} // 마지막 여백
-      keyboardShouldPersistTaps="handled"
-    >
-      <Text style={styles.title}>모임을 만들어 주세요</Text>
-
-      {/* 운동 종목 */}
-      <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8 }}>운동 종목 선택</Text>
-      <View style={styles.sportButtonContainer}>
-        {['농구', '축구', '배드민턴', '런닝'].map((sport) => (
-          <TouchableOpacity
-            key={sport}
-            style={[styles.sportButton, category === sport && styles.sportButtonSelected]}
-            onPress={() => setCategory(sport)}
-          >
-            <Text style={category === sport ? styles.sportTextSelected : styles.sportText}>
-              {sport}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* 제목 */}
-      <TextInput
-        placeholder="제목"
-        style={styles.input}
-        value={content}
-        onChangeText={setContent}
-      />
-
-{/* 날짜 선택 */}
-<TouchableOpacity style={styles.input} onPress={() => openPicker('date')}>
-  <Text style={styles.timeText}>
-    {date ? date.toLocaleDateString() : '날짜 선택'}
-  </Text>
-</TouchableOpacity>
-
-{/* 시작/종료 시간 */}
-<View style={[styles.input, { flexDirection: 'row', justifyContent: 'space-between' }]}>
-  <TouchableOpacity onPress={() => openPicker('startTime')}>
-    <Text style={styles.timeText}>
-      {startTime ? startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '시작 시간'}
-    </Text>
-  </TouchableOpacity>
-  <Text> ~ </Text>
-  <TouchableOpacity onPress={() => openPicker('endTime')}>
-    <Text style={styles.timeText}>
-      {endTime ? endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '종료 시간'}
-    </Text>
-  </TouchableOpacity>
-</View>
-
-
-      {/* Picker */}
-      {showPicker && (
-        <DateTimePicker
-          mode={pickerMode}
-          value={new Date()}
-          display={pickerMode === 'date' ? 'calendar' : 'spinner'}
-          onChange={onChangeDateTime}
-        />
-      )}
-
-
-      {/* 장소 */}
-      <TouchableOpacity
-        style={[styles.input, styles.locationBox]}
-        onPress={() => {
-          navigation.navigate('PlaceSearch', {
-            from: 'CreatePost',
-            userId,
-            nickname: nickname!,
-            prevData: { category, content, detail },
-          });
-        }}
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#f2f2f2' }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <Text style={{ color: locationName ? '#000' : '#888' }}>
-          {locationName || '장소를 선택하세요'}
-        </Text>
-      </TouchableOpacity>
-
-      {/* 세부사항 */}
-      <TextInput
-        placeholder="세부사항 (예: 준비물: 농구화)"
-        style={styles.input}
-        multiline  // ✅ 줄바꿈 가능
-        value={detail}
-        onChangeText={setDetail}
-      />
-
-      {/* 선호 연령대 */}
-      <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8 }}>선호 연령대 (최대 2개)</Text>
-      <View style={styles.ageContainer}>
-        {["중학생", "고등학생", "20대", "30대", "40대", "50대", "상관없음"].map(age => (
-          <TouchableOpacity
-            key={age}
-            style={[styles.ageButton, preferredAgeGroups.includes(age) && styles.ageButtonSelected]}
-            onPress={() => toggleAgeGroup(age)}
-          >
-            <Text style={preferredAgeGroups.includes(age) ? styles.ageTextSelected : styles.ageText}>
-              {age}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* 최대 참가자 수 */}
-      <View style={styles.inputContainer}>
-        <Text>모집인원 수(자신 포함):</Text>
-        <TextInput
-          keyboardType="numeric"
-          value={String(maxParticipants)}
-          onChangeText={(text) => setMaxParticipants(Number(text))}
-          style={styles.textInput}
-        />
-      </View>
-
-      {/* 제출 버튼 */}
-      <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-        <Text style={styles.buttonText}>모임 만들기</Text>
-      </TouchableOpacity>
-      </ScrollView>
-  </KeyboardAvoidingView>
-  </SafeAreaView>
-
-);
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.card}>
+            <Text style={styles.title}>모임을 만들어 주세요</Text>
+  
+            {/* 운동 종목 */}
+            <Text style={styles.sectionTitle}>운동 종목 선택</Text>
+            <View style={styles.sportButtonContainer}>
+              {['농구', '축구', '배드민턴', '런닝'].map((sport) => (
+                <TouchableOpacity
+                  key={sport}
+                  style={[
+                    styles.sportButton,
+                    category === sport && styles.sportButtonSelected,
+                  ]}
+                  onPress={() => setCategory(sport)}
+                >
+                  <Text
+                    style={
+                      category === sport ? styles.sportTextSelected : styles.sportText
+                    }
+                  >
+                    {sport}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+  
+            {/* 제목 */}
+            <TextInput
+              placeholder="제목"
+              style={styles.input}
+              value={content}
+              onChangeText={setContent}
+            />
+  
+            {/* 날짜 선택 */}
+            <TouchableOpacity style={styles.input} onPress={() => openPicker('date')}>
+              <Text style={styles.timeText}>
+                {date ? date.toLocaleDateString() : '날짜 선택'}
+              </Text>
+            </TouchableOpacity>
+  
+            {/* 시작/종료 시간 */}
+            <View
+              style={[
+                styles.input,
+                { flexDirection: 'row', justifyContent: 'space-between' },
+              ]}
+            >
+              <TouchableOpacity onPress={() => openPicker('startTime')}>
+                <Text style={styles.timeText}>
+                  {startTime
+                    ? startTime.toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : '시작 시간'}
+                </Text>
+              </TouchableOpacity>
+              <Text> ~ </Text>
+              <TouchableOpacity onPress={() => openPicker('endTime')}>
+                <Text style={styles.timeText}>
+                  {endTime
+                    ? endTime.toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : '종료 시간'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+  
+            {/* Picker */}
+            {showPicker && (
+              <DateTimePicker
+                mode={pickerMode}
+                value={new Date()}
+                display={pickerMode === 'date' ? 'calendar' : 'spinner'}
+                onChange={onChangeDateTime}
+              />
+            )}
+  
+            {/* 장소 */}
+            <TouchableOpacity
+              style={[styles.input, styles.locationBox]}
+              onPress={() => {
+                navigation.navigate('PlaceSearch', {
+                  from: 'CreatePost',
+                  userId,
+                  nickname: nickname!,
+                  prevData: { category, content, detail },
+                });
+              }}
+            >
+              <Text style={{ color: locationName ? '#000' : '#888' }}>
+                {locationName || '장소를 선택하세요'}
+              </Text>
+            </TouchableOpacity>
+  
+            {/* 세부사항 */}
+            <TextInput
+              placeholder="세부사항 (예: 준비물: 농구화)"
+              style={styles.input}
+              multiline
+              value={detail}
+              onChangeText={setDetail}
+            />
+  
+            {/* 선호 연령대 */}
+            <Text style={styles.sectionTitle}>선호 연령대 (최대 2개)</Text>
+            <View style={styles.ageContainer}>
+              {[
+                '중학생',
+                '고등학생',
+                '20대',
+                '30대',
+                '40대',
+                '50대',
+                '상관없음',
+              ].map((age) => (
+                <TouchableOpacity
+                  key={age}
+                  style={[
+                    styles.ageButton,
+                    preferredAgeGroups.includes(age) && styles.ageButtonSelected,
+                  ]}
+                  onPress={() => toggleAgeGroup(age)}
+                >
+                  <Text
+                    style={
+                      preferredAgeGroups.includes(age)
+                        ? styles.ageTextSelected
+                        : styles.ageText
+                    }
+                  >
+                    {age}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+  
+            {/* 최대 참가자 수 */}
+            <View style={styles.inputContainer}>
+              <Text>모집인원 수(자신 포함):</Text>
+              <TextInput
+                keyboardType="numeric"
+                value={String(maxParticipants)}
+                onChangeText={(text) => setMaxParticipants(Number(text))}
+                style={styles.textInput}
+              />
+            </View>
+  
+            {/* 제출 버튼 */}
+            <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+              <Text style={styles.buttonText}>모임 만들기</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+  
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 20 },
+  container: { flex: 1 },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 3,
+    marginBottom: 16,
+  },
+  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
+  sectionTitle: { fontSize: 16, fontWeight: '600', marginBottom: 8 },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 10,
+    borderColor: '#ddd',
     borderRadius: 8,
+    padding: 12,
     marginBottom: 12,
-    fontSize: 16,
+    fontSize: 15,
+    backgroundColor: '#fafafa',
   },
   locationBox: { justifyContent: 'center', height: 48 },
   sportButtonContainer: {
@@ -314,7 +364,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     marginHorizontal: 4,
-    borderRadius: 6,
+    borderRadius: 8,
     backgroundColor: '#eee',
     alignItems: 'center',
   },
@@ -333,9 +383,11 @@ const styles = StyleSheet.create({
   textInput: {
     borderWidth: 1,
     borderColor: '#ccc',
-    padding: 10,
     borderRadius: 8,
-    fontSize: 16,
+    padding: 10,
+    fontSize: 15,
+    backgroundColor: '#fafafa',
+    marginTop: 6,
   },
   timeText: { fontSize: 16, color: '#000' },
   ageContainer: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12 },

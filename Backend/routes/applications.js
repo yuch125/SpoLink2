@@ -17,6 +17,19 @@ function recomputeCounts(postDoc) {
   return { acceptedCnt, participantCount, isFull };
 }
 
+function calcTrust(up = 0, down = 0) {
+  const total = up + down;
+  const score = Math.round(((up + 1) / (total + 2)) * 100); // 라플라스 평활 적용
+  let grade = '데이터부족';
+    if (score >= 80) grade = '매우높음';
+    else if (score >= 60) grade = '높음';
+    else if (score >= 40) grade = '보통';
+    else if (score >= 20) grade = '낮음';
+    else grade = '매우낮음';
+  return { score, grade, total };
+}
+
+
 function emitParticipantsUpdated(postDoc, participantCount, isFull) {
   if (ioRef) {
     ioRef.emit('post:participantsUpdated', {
@@ -98,20 +111,32 @@ router.get('/post/:postId', async (req, res) => {
     const { postId } = req.params;
 
     const applications = await Application.find({ post: postId })
-      .populate('applicant.userId', 'nickname trustScore profileImage ageGroup');
+      .populate('applicant.userId', 'nickname profileImage ageGroup likesCount dislikesCount'); 
+      // 🔹 trustScore 말고 likesCount/dislikesCount를 가져옴
 
-    // 프론트에서 쓰기 편하게 applicant 구조를 평탄화
-    const formatted = applications.map(app => ({
-      _id: app._id,
-      status: app.status,
-      applicant: {
-        _id: app.applicant.userId._id,
-        nickname: app.applicant.userId.nickname,
-        trustScore: app.applicant.userId.trustScore,
-        profileImage: app.applicant.userId.profileImage,
-        ageGroup: app.applicant.userId.ageGroup,
-      },
-    }));
+    const formatted = applications.map(app => {
+      const u = app.applicant.userId;
+      const up = u.likesCount ?? 0;
+      const down = u.dislikesCount ?? 0;
+      const { grade, score, total } = calcTrust(up, down);
+      return {
+        _id: app._id,
+        status: app.status,
+        applicant: {
+          _id: u._id,
+          nickname: u.nickname,
+          profileImage: u.profileImage,
+          ageGroup: u.ageGroup,
+          trust: {
+            score,
+            grade,
+            total,
+            likes: u.likesCount ?? 0,
+            dislikes: u.dislikesCount ?? 0,
+          }
+        },
+      };
+    });
 
     res.json(formatted);
   } catch (err) {
@@ -119,6 +144,7 @@ router.get('/post/:postId', async (req, res) => {
     res.status(500).json({ error: '서버 오류' });
   }
 });
+
 
 
 

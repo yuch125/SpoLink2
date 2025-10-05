@@ -284,6 +284,7 @@ export default function HomeScreen() {
       setSelectedAges([]);
     };
 
+    console.log(filteredPosts)
 
     return (
       <SafeAreaView style={styles.container}>

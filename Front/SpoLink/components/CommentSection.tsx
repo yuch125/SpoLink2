@@ -72,6 +72,8 @@ export default function CommentSection({ postId }: Props) {
     try {
       const res = await axios.get<{ comments: Comment[] }>(`${COMMENTS_URL}/${postId}`);
       setComments(res.data.comments);
+      console.log("댓글 데이터")
+      console.log(res.data.comments)
     } catch (err) {
       console.error('❌ 댓글 불러오기 실패:', err);
     }
@@ -133,7 +135,7 @@ export default function CommentSection({ postId }: Props) {
           onChangeText={setNewComment}
         />
         <TouchableOpacity onPress={handleSubmit} style={styles.submitButton}>
-          <Text style={styles.submitText}>작성</Text>
+          <Text style={styles.submitText}>댓글 작성</Text>
         </TouchableOpacity>
       </View>
 
@@ -208,9 +210,6 @@ export default function CommentSection({ postId }: Props) {
                       </TouchableOpacity>
                     </>
                   )}
-                  <TouchableOpacity onPress={() => setReplyToId(item._id)}>
-                    <Text style={styles.replyButton}>답글 달기</Text>
-                  </TouchableOpacity>
                 </View>
               </>
             )}
