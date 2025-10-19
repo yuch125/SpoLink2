@@ -39,7 +39,7 @@ export default function App() {
             }}
           >
             <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="NicknameSetup" component={NicknameSetupScreen} options={{ title: '닉네임 설정' }} />
+            <Stack.Screen name="NicknameSetup" component={NicknameSetupScreen} options={{ title: '프로필 설정' }} />
             <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
             <Stack.Screen name="CreatePost" component={CreatePostScreen} options={{ title: '모임 만들기' }} />
             <Stack.Screen name="PlaceSearch" component={PlaceSearchScreen} options={{ title: '장소 검색' }} />

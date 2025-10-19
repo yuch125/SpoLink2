@@ -11,7 +11,6 @@ router.get('/:postId', async (req, res) => {
       .sort({ createdAt: 1 }) // 최신순 or 오래된순 정렬
       .populate('author', 'nickname profileImage') // ✅ 최신 프로필 가져오기
       .lean();
- dlqf
     for (let c of comments) {
       const replies = await Comment
         .find({ parentComment: c._id })

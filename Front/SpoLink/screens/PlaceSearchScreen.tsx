@@ -75,11 +75,6 @@ const PlaceSearchScreen: React.FC = () => {
       return;
     }
 
-    if (!FACILITY_KEYWORDS.some((k) => query.includes(k))) {
-      setErrorMsg('장소를 검색해보세요.');
-      setKeyword('체육관');
-      return;
-    }
 
     setLoading(true);
     setErrorMsg(null);
@@ -188,7 +183,7 @@ const PlaceSearchScreen: React.FC = () => {
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.input}
-          placeholder="검색어: 체육관, 농구장, 축구장, 배드민턴장, 산책로, 트레일"
+          placeholder="운동 장소를 찾아보세요!"
           value={keyword}
           onChangeText={setKeyword}
           onSubmitEditing={() => searchPlaces(keyword)}
